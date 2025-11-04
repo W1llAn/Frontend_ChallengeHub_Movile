@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ChallengeHub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#732ff1", "background-light": "#f6f6f8", "background-dark": "#161022"}, fontFamily: {display: "Plus Jakarta Sans"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden text-zinc-900 dark:text-zinc-50">
+<div class="flex flex-col flex-1 pb-24">
+<!-- TopAppBar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8" data-alt="User profile picture of Alex" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDSKupdqHoFFbchBV6htZ_3bGBzrIIb7h2wn9GBu0UgpSUXFg5rwWsrazjD6QpuK2hyfQQboWPhcGNCaiFlapVqi557h9Vf0ctnHKCdnLtVVCnGKFXlB8H7xQq78rw1wYaMcj8IkOxXrofWRF_9oC4Z7z9gtvCsZ2aTB9EjRDRs2AOrQnGx8la624DPzHuKme4E01IDJZCpmQcu2FQdya_V01kaWwSvGtMa07Tae0X86S4Ga0YDdEjzjAQTK7U8Zy6XYlNcJ2h0ZZQ");'></div>
+</div>
+<h2 class="text-zinc-900 dark:text-zinc-50 text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">ChallengeHub</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-zinc-900 dark:text-zinc-50 gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-zinc-900 dark:text-zinc-50">notifications</span>
+</button>
+</div>
+</div>
+<!-- HeadlineText -->
+<h1 class="text-zinc-900 dark:text-zinc-50 tracking-light text-[32px] font-bold leading-tight px-4 text-left pb-3 pt-6">¡Hola, Alex! ¿Listo para un nuevo reto?</h1>
+<!-- SearchBar -->
+<div class="px-4 py-3">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-xl h-full">
+<div class="text-[#8a7260] flex border-none bg-white dark:bg-background-dark dark:border dark:border-zinc-700 items-center justify-center pl-4 rounded-l-xl border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-xl text-zinc-900 dark:text-zinc-50 focus:outline-0 focus:ring-0 border-none bg-white dark:bg-background-dark dark:border dark:border-zinc-700 dark:border-l-0 h-full placeholder:text-[#8a7260] px-4 pl-2 text-base font-normal leading-normal" placeholder="Buscar retos de fotografía..."/>
+</div>
+</label>
+</div>
+<!-- SectionHeader -->
+<h2 class="text-zinc-900 dark:text-zinc-50 text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Destacados para ti</h2>
+<!-- Carousel -->
+<div class="flex overflow-y-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden pl-4">
+<div class="flex items-stretch gap-4">
+<div class="flex h-full flex-1 flex-col gap-3 rounded-xl min-w-60 w-60">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex flex-col" data-alt="A person capturing a golden sunrise over a mountain range with a camera" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDvfS__6qtROXoEJn-tfZ4sAoXUhKBOoAJM8V5J06L_Te2i5TmjERY4NpOH1pbiPAsP1wuTKEJCjco-f5Z5KW9iMmqq2w3dfU862Lo1gImjZRqJBzGL92fJskIuGPZYxo-YvyPiCThKFMP6nksq3V92S_0FYlWVg-wHVNxCcOP1XzC4hA4DW5cQ7zCp1YR2N9z-6XqEGNMTqf03PwTYnVsZI1f4ZxyKokGXqP3Qk6K6WX0I2p5Ta_ebGy5ol1K3Zb926ahTXhSHr3s");'></div>
+<div>
+<p class="text-zinc-900 dark:text-zinc-50 text-base font-medium leading-normal">Reto: Amanecer Dorado</p>
+<p class="text-zinc-500 dark:text-zinc-400 text-sm font-normal leading-normal">Fotografía</p>
+</div>
+</div>
+<div class="flex h-full flex-1 flex-col gap-3 rounded-xl min-w-60 w-60">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex flex-col" data-alt="Colorful watercolor paintings drying on a wooden table" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAYCH0ljQqdp-_NZ1sFYBrJpboOaMsDPhCJCZdht9VkF_YgUDNkNedNlzoS-DT6islX-r8vm5cAUg-ij3HDik701YYV55Ui-B9seOG8mztyPN3BIzLC9-cbmA5AzoNkhCgPQp92_Jtamc-8Z7ddect5gMNWrU1yXlFa692R_9PLwNwMvea8p7JZdjqnpDvUveJVZr7GAyFWq_jhuthlhPyjBON4XjpdlDD7681UTRtDCTlr8icxJLER-ELgcZOBmBs2XtIN3HDXm8o");'></div>
+<div>
+<p class="text-zinc-900 dark:text-zinc-50 text-base font-medium leading-normal">30 Días de Acuarela</p>
+<p class="text-zinc-500 dark:text-zinc-400 text-sm font-normal leading-normal">Arte</p>
+</div>
+</div>
+<div class="flex h-full flex-1 flex-col gap-3 rounded-xl min-w-60 w-60 pr-4">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex flex-col" data-alt="Freshly made pasta dough being rolled out on a floured surface" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDJB2F6DJyOyUlbZP_p4JVlV3KTUHTXVy87ny1TXAZrBnv1YsqZ2KU7sMpyX-57A9y07qwnV1ejam2Y_cMg5e9Td198A7QbkC9obFRVUOLWBa3d5YiwrPNtLa-Kh-OYEZ-rqMfbd996MJ1JfJrLDvG2VCvuf9U3YWUaXdmGC7g3GvHvNuwe20GYZIX4qJDzj5zOWW-qZIKbOE6AzUqo4QPW4ptJ0O_lRXu88c0sua9tAUTsHxq3l6ZdsyY5LV5EL_gND2FsDJeo-IM");'></div>
+<div>
+<p class="text-zinc-900 dark:text-zinc-50 text-base font-medium leading-normal">Maestro de la Pasta Fresca</p>
+<p class="text-zinc-500 dark:text-zinc-400 text-sm font-normal leading-normal">Cocina</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Category Selector -->
+<div class="flex flex-col gap-4 px-4 pt-8 pb-4">
+<h2 class="text-zinc-900 dark:text-zinc-50 text-[22px] font-bold leading-tight tracking-[-0.015em]">Categorías</h2>
+<div class="flex overflow-y-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden">
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center gap-2 rounded-full bg-primary/20 dark:bg-primary/30 px-4 py-2 text-sm font-medium text-primary dark:text-primary">
+<span class="material-symbols-outlined text-base">fitness_center</span>
+<span>Fitness</span>
+</button>
+<button class="flex items-center justify-center gap-2 rounded-full bg-zinc-100 dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300">
+<span class="material-symbols-outlined text-base">palette</span>
+<span>Arte</span>
+</button>
+<button class="flex items-center justify-center gap-2 rounded-full bg-zinc-100 dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300">
+<span class="material-symbols-outlined text-base">restaurant_menu</span>
+<span>Cocina</span>
+</button>
+<button class="flex items-center justify-center gap-2 rounded-full bg-zinc-100 dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300">
+<span class="material-symbols-outlined text-base">flight</span>
+<span>Viajes</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Challenge Grid -->
+<div class="px-4 pt-4">
+<h2 class="text-zinc-900 dark:text-zinc-50 text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4">Explorar Retos</h2>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-3">
+<div class="aspect-[4/5] w-full bg-cover bg-center rounded-xl" data-alt="A group of people doing yoga in a bright studio" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAc9y8g3N2sFDlb-pWW6jbvoKzOcD0b2L9fgOUaKQ6CEx5zPA8dQZXCU8gapIA2W5kYrdWvFN1bxxSfHSiVwQIy5hl090bLBG5zNRWYcb22YAQkS5kSf0lxdi3XiFZylhdI5nzflB-DlbB1ku9IACvYMqec3gM46ONVXoeqQpi57-vjNgbuP5PHMecEUWXJUghe2uAiT7m7W6HM52FjAD-8PpfybfPj8YkKIZWLLt1u3CiW9I3dA3XuEN7ZOthLVW1MQvcKxkA-MsM');"></div>
+<div class="flex flex-col">
+<p class="font-medium text-zinc-900 dark:text-zinc-50">30 Días de Yoga</p>
+<p class="text-sm text-zinc-500 dark:text-zinc-400">Fitness - Fácil</p>
+<p class="flex items-center gap-1 text-sm text-primary dark:text-primary pt-1">
+<span class="material-symbols-outlined text-base">local_fire_department</span>
+<span>1.2k participantes</span>
+</p>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="aspect-[4/5] w-full bg-cover bg-center rounded-xl" data-alt="A delicious looking homemade pizza on a wooden board" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBbFPdiBAz25YvBjBdo2B02hUxOCOxQyTKuqn_zgLoByzDiQ2BffaIczYZwridj3Y74zJ6BikiPLkRfvgDfBFuCrFcsFAeMedSFROhKUB8vyrSVBAEq4YftbqlmGf6ucBVP072O5ZxX3eevwikx5uVdy9DSjlgM6A9ji7H7FgRSrHgxzXm9bMeCSpk9KuATIoO1-jqC0lGIuL8pid3JFYFK98E4MjNd-eDEU3P4bXlyUnfHFfvveaIYgvdUI8v9VrFbW3NDkGDSm60');"></div>
+<div class="flex flex-col">
+<p class="font-medium text-zinc-900 dark:text-zinc-50">Pizza Perfecta</p>
+<p class="text-sm text-zinc-500 dark:text-zinc-400">Cocina - Intermedio</p>
+<p class="flex items-center gap-1 text-sm text-primary dark:text-primary pt-1">
+<span class="material-symbols-outlined text-base">emoji_events</span>
+<span>Premio: $500</span>
+</p>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="aspect-[4/5] w-full bg-cover bg-center rounded-xl" data-alt="An artist painting on a large canvas in their sunlit studio" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBSa5-o9tkbCjgphy5zFXzPWoyPJX7bPbF1joxYdNRr7H_-JtjSRfC9-Mbp1mngv9PyKAyD4VGGhlLvsjOpZ7wT9l9NR26L_0yxxU7OaZ55MRVxYFcLJFT1zfAxvJJ8moC8iDRfqa_cN_-L1BL4tZLN2KSdmidLv0MLKTAfVT8eXCIwCP4LDG5NCsYTZUxuZfTt4_2Vl3oHCdj6KBiK6--BINZ8RyECgkD-zisVPvaP6zMuhaCnHEW4_Vdwp6QC-nThpY08768J9Kg');"></div>
+<div class="flex flex-col">
+<p class="font-medium text-zinc-900 dark:text-zinc-50">Retrato Expresionista</p>
+<p class="text-sm text-zinc-500 dark:text-zinc-400">Arte - Difícil</p>
+<p class="flex items-center gap-1 text-sm text-primary dark:text-primary pt-1">
+<span class="material-symbols-outlined text-base">local_fire_department</span>
+<span>980 participantes</span>
+</p>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="aspect-[4/5] w-full bg-cover bg-center rounded-xl" data-alt="A person running on a trail through a lush green forest" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBzyJm_R3ZfOY5pkDXyj1r56DRB5byqdYaN6ngqXtNBNZCxKj0uvwIhpmz2QwbcF2XbdpL-mZRbzzMS9JLXLSU7SyB2RvfcNCzkW2maHwGc9wTCh1aUhZTQTi5TmdU6Qh_T3Mg8lA9_NsMTg9ETe_nPF8E6ARB-ciMXYDqAexyKaRl1UycjglT3PT_lKr9268ViaumDLFVYIe4zqdV_dXeqhGil7MrhgSPRYIChMCbIGswdykdiM9cIIGKWM_1MQwHCvg5ZUAQS3c8');"></div>
+<div class="flex flex-col">
+<p class="font-medium text-zinc-900 dark:text-zinc-50">Corre tus primeros 5K</p>
+<p class="text-sm text-zinc-500 dark:text-zinc-400">Fitness - Fácil</p>
+<p class="flex items-center gap-1 text-sm text-primary dark:text-primary pt-1">
+<span class="material-symbols-outlined text-base">local_fire_department</span>
+<span>2.5k participantes</span>
+</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Tab Bar -->
+<div class="fixed bottom-0 left-0 right-0 h-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-lg border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-around z-10">
+<div class="flex flex-col items-center gap-1 text-primary dark:text-primary">
+<span class="material-symbols-outlined">home</span>
+<span class="text-xs font-bold">Inicio</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-zinc-500 dark:text-zinc-400">
+<span class="material-symbols-outlined">military_tech</span>
+<span class="text-xs">Mis Retos</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-zinc-500 dark:text-zinc-400">
+<span class="material-symbols-outlined">public</span>
+<span class="text-xs">Creadores</span>
+
+</div>
+<div class="flex flex-col items-center gap-1 text-zinc-500 dark:text-zinc-400">
+<span class="material-symbols-outlined">star</span>
+<span class="text-xs">Mis intereses</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-zinc-500 dark:text-zinc-400">
+<span class="material-symbols-outlined">person</span>
+<span class="text-xs">Perfil</span>
+</div>
+</div>
+</div>
+</body></html>
