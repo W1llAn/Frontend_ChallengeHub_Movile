@@ -1,31 +1,64 @@
-import { StyleSheet } from 'react-native';
-
-import EditScreenInfo from '@/components/EditScreenInfo';
+import { StyleSheet, ScrollView } from 'react-native';
 import { Text, View } from '@/components/Themed';
 
-export default function TabOneScreen() {
+/**
+ * Home Screen - Main feed showing featured challenges and categories
+ * Follows Single Responsibility Principle: manages only home feed display
+ */
+export default function HomeScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
-    </View>
+    <ScrollView style={styles.scrollView}>
+      <View style={styles.container}>
+        <Text style={styles.greeting}>¡Hola, User! ¿Listo para un nuevo reto?</Text>
+        
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Destacados para ti</Text>
+          <Text style={styles.placeholder}>Carrusel de retos destacados</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Categorías</Text>
+          <Text style={styles.placeholder}>Fitness • Arte • Cocina • Viajes</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Explorar Retos</Text>
+          <Text style={styles.placeholder}>Grid de retos disponibles</Text>
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
-  title: {
-    fontSize: 20,
+  greeting: {
+    fontSize: 32,
     fontWeight: 'bold',
+    lineHeight: 38,
+    marginTop: 24,
+    marginBottom: 16,
   },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
+  section: {
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    letterSpacing: -0.015,
+  },
+  placeholder: {
+    fontSize: 16,
+    opacity: 0.6,
+    fontStyle: 'italic',
+    paddingVertical: 20,
   },
 });
