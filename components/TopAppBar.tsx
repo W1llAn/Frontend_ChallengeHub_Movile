@@ -1,24 +1,71 @@
-import React from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
-import { Text } from '@/components/Themed';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
+import React from "react";
+import { View, StyleSheet, Pressable, Alert, Platform } from "react-native";
+import { Text } from "@/components/Themed";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
+import Colors from "@/constants/Colors";
+import { useColorScheme } from "@/components/useColorScheme";
 
 interface TopAppBarProps {
   title: string;
   onNotificationPress?: () => void;
+  onLogoutPress?: () => void;
   showNotifications?: boolean;
+  showLogout?: boolean;
 }
-
 
 export default function TopAppBar({
   title,
   onNotificationPress,
+  onLogoutPress,
   showNotifications = true,
+  showLogout = true,
 }: TopAppBarProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colorScheme = (useColorScheme() ?? "light") as "light" | "dark";
+  const colors = Colors[colorScheme];
+
+  const handleLogout = () => {
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        "¿Estás seguro de que deseas cerrar sesión?"
+      );
+
+      if (confirmed) {
+        if (onLogoutPress) {
+          onLogoutPress();
+        } else {
+          console.log("onLogoutPress no está definido!");
+        }
+      } else {
+        console.log("Logout cancelado");
+      }
+    } else {
+      // En mobile usar Alert nativo
+      Alert.alert(
+        "Cerrar Sesión",
+        "¿Estás seguro de que deseas cerrar sesión?",
+        [
+          {
+            text: "Cancelar",
+            style: "cancel",
+            onPress: () => console.log("Logout cancelado"),
+          },
+          {
+            text: "Cerrar Sesión",
+            style: "destructive",
+            onPress: () => {
+              console.log("✅ Confirmado logout, ejecutando onLogoutPress...");
+              if (onLogoutPress) {
+                onLogoutPress();
+              } else {
+                console.log("onLogoutPress no está definido!");
+              }
+            },
+          },
+        ]
+      );
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -30,7 +77,7 @@ export default function TopAppBar({
       {/* Center section - Empty */}
       <View style={styles.centerSection} />
 
-      {/* Right section - Notifications */}
+      {/* Right section - Notifications & Logout */}
       <View style={styles.rightSection}>
         {showNotifications && (
           <Pressable
@@ -43,6 +90,17 @@ export default function TopAppBar({
             <FontAwesome name="bell-o" size={24} color={colors.text} />
           </Pressable>
         )}
+        {showLogout && (
+          <Pressable
+            onPress={handleLogout}
+            style={({ pressed }) => [
+              styles.iconButton,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Ionicons name="log-out-outline" size={26} color={colors.error} />
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -50,33 +108,34 @@ export default function TopAppBar({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingBottom: 8,
   },
   leftSection: {
     flex: 1,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   centerSection: {
     flex: 1,
   },
   rightSection: {
-    width: 48,
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     letterSpacing: -0.015,
   },
   iconButton: {
     width: 48,
     height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
