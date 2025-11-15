@@ -1,18 +1,18 @@
-import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Tabs } from 'expo-router';
+import React from "react";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Tabs, router } from "expo-router";
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-import TopAppBar from '@/components/TopAppBar';
+import Colors from "@/constants/Colors";
+import { useColorScheme } from "@/components/useColorScheme";
+import { useAuth } from "@/contexts/AuthContext";
+import TopAppBar from "@/components/TopAppBar";
 
 /**
  * TabBarIcon component - Renders icons for bottom tab navigation
  * Follows Open/Closed Principle: extensible for different icon types
  */
 function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
+  name: React.ComponentProps<typeof FontAwesome>["name"];
   color: string;
 }) {
   return <FontAwesome size={24} style={{ marginBottom: -3 }} {...props} />;
@@ -23,65 +23,76 @@ function TabBarIcon(props: {
  * Implements 5 tabs as per design: Inicio, Mis Retos, Creadores, Mis Intereses, Perfil
  */
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const colorScheme = (useColorScheme() ?? "light") as "light" | "dark";
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace("/login");
+    } catch (error) {
+      console.error("TabLayout: Error al cerrar sesión:", error);
+    }
+  };
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
+        tabBarActiveTintColor: Colors[colorScheme].tint,
+        tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
         tabBarStyle: {
-          backgroundColor: Colors[colorScheme ?? 'light'].background,
+          backgroundColor: Colors[colorScheme].background,
           borderTopWidth: 1,
-          borderTopColor: colorScheme === 'dark' ? '#333' : '#e5e5e5',
+          borderTopColor: colorScheme === "dark" ? "#333" : "#e5e5e5",
           height: 80,
           paddingBottom: 8,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '400',
+          fontWeight: "400",
         },
-        headerShown: useClientOnlyValue(false, true),
         header: () => (
           <TopAppBar
             title="ChallengeHub"
-            onNotificationPress={() => console.log('Notifications pressed')}
+            onNotificationPress={() => console.log("Notifications pressed")}
+            onLogoutPress={handleLogout}
           />
         ),
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Inicio',
+          title: "Inicio",
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
       <Tabs.Screen
         name="my-challenges"
         options={{
-          title: 'Mis Retos',
+          title: "Mis Retos",
           tabBarIcon: ({ color }) => <TabBarIcon name="trophy" color={color} />,
         }}
       />
       <Tabs.Screen
         name="creators"
         options={{
-          title: 'Creadores',
+          title: "Creadores",
           tabBarIcon: ({ color }) => <TabBarIcon name="globe" color={color} />,
         }}
       />
       <Tabs.Screen
         name="interests"
         options={{
-          title: 'Mis Intereses',
+          title: "Mis Intereses",
           tabBarIcon: ({ color }) => <TabBarIcon name="star" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Perfil',
+          title: "Perfil",
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
         }}
       />
