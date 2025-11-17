@@ -173,7 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Iniciar sesión
   const login = async () => {
     console.log("Iniciando login...");
-    console.log("🔗 Redirect URI usada:", redirectUri);
+    console.log("Redirect URI usada:", redirectUri);
 
     // En Expo Go usamos el proxy, en build nativa no
     // @ts-ignore - useProxy no está tipado pero funciona en Expo Go
@@ -196,7 +196,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         window.location.href = logoutUrl;
       } else {
         // En mobile, usar WebBrowser
-        console.log("📱 AuthContext: Plataforma mobile, usando WebBrowser");
+        console.log("AuthContext: Plataforma mobile, usando WebBrowser");
         await WebBrowser.openAuthSessionAsync(logoutUrl, redirectUri);
       }
 
