@@ -9,8 +9,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { showNotifier } from "../services/notifier";
 import type { ErrorResponseData } from "../types/api/api.type";
 
-// 🔹 Base URL desde variables de entorno de Expo
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE ?? "http://10.0.2.2:8080";
+//Base URL desde variables de entorno de Expo
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -55,58 +55,66 @@ const extractErrorMessage = (error: AxiosError<any>) => {
   return "Ocurrió un error. Intenta nuevamente.";
 };
 
-// 🔹 Hook que te devuelve el api YA autenticado con Auth0
+// 🔹 Configurar interceptores del API
+export const setupApiInterceptors = (
+  accessToken: string | null,
+  logout: () => void
+) => {
+  // Interceptor de REQUEST: agrega el Bearer token si existe
+  api.interceptors.request.use(
+    (config: InternalAxiosRequestConfig<any>) => {
+      if (accessToken) {
+        if (!config.headers) {
+          config.headers = {} as AxiosRequestHeaders;
+        }
+        (
+          config.headers as AxiosRequestHeaders
+        ).Authorization = `Bearer ${accessToken}`;
+
+        // 📋 DEBUG: Imprimir JWT completo y headers
+        console.log("📤 [REQUEST]", config.method?.toUpperCase(), config.url);
+        console.log("🔑 JWT Token completo:", accessToken);
+        console.log("📋 Headers enviados:", config.headers);
+      } else {
+        console.warn("⚠️ No hay accessToken disponible");
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  // Interceptor de RESPONSE: manejo centralizado de errores + notifier
+  api.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError<any>) => {
+      const status = error.response?.status;
+      const message = extractErrorMessage(error);
+
+      if (status === 401) {
+        showNotifier(message, "error");
+        logout();
+      } else if (status && status >= 400 && status < 500) {
+        showNotifier(message || "Error en la solicitud.", "warn");
+      } else if (status && status >= 500) {
+        showNotifier(
+          message || "Error del servidor, intenta más tarde.",
+          "error"
+        );
+      } else {
+        showNotifier(message, "error");
+      }
+
+      return Promise.reject(error);
+    }
+  );
+};
+
+// 🔹 Hook que configura los interceptores automáticamente
 export const useApi = () => {
   const { accessToken, logout } = useAuth();
 
   useEffect(() => {
-    // Interceptor de REQUEST: agrega el Bearer token si existe
-    const reqId = api.interceptors.request.use(
-      (config: InternalAxiosRequestConfig<any>) => {
-        if (accessToken) {
-          if (!config.headers) {
-            config.headers = {} as AxiosRequestHeaders;
-          }
-          (
-            config.headers as AxiosRequestHeaders
-          ).Authorization = `Bearer ${accessToken}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Interceptor de RESPONSE: manejo centralizado de errores + notifier
-    const resId = api.interceptors.response.use(
-      (response) => response,
-      (error: AxiosError<any>) => {
-        const status = error.response?.status;
-        const message = extractErrorMessage(error);
-
-        if (status === 401) {
-          showNotifier(message, "error");
-          // cerramos sesión global (AuthContext ya se encarga de limpiar storage y redirigir)
-          logout();
-        } else if (status && status >= 400 && status < 500) {
-          showNotifier(message || "Error en la solicitud.", "warn");
-        } else if (status && status >= 500) {
-          showNotifier(
-            message || "Error del servidor, intenta más tarde.",
-            "error"
-          );
-        } else {
-          showNotifier(message, "error");
-        }
-
-        return Promise.reject(error);
-      }
-    );
-
-    // Limpiar interceptores cuando cambie el token o se desmonte el componente
-    return () => {
-      api.interceptors.request.eject(reqId);
-      api.interceptors.response.eject(resId);
-    };
+    setupApiInterceptors(accessToken, logout);
   }, [accessToken, logout]);
 
   return api;
