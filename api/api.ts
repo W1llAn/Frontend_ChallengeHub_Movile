@@ -71,12 +71,17 @@ export const setupApiInterceptors = (
           config.headers as AxiosRequestHeaders
         ).Authorization = `Bearer ${accessToken}`;
 
-        // 📋 DEBUG: Imprimir JWT completo y headers
-        console.log("📤 [REQUEST]", config.method?.toUpperCase(), config.url);
-        console.log("🔑 JWT Token completo:", accessToken);
-        console.log("📋 Headers enviados:", config.headers);
+        const tokenParts = accessToken.split(".");
+        const tokenType =
+          tokenParts.length === 3
+            ? "JWT"
+            : tokenParts.length === 5
+            ? "JWE"
+            : "Unknown";
+        console.log("Request:", config.method?.toUpperCase(), config.url);
+        console.log("Token Type:", tokenType);
       } else {
-        console.warn("⚠️ No hay accessToken disponible");
+        console.warn("No accessToken available");
       }
       return config;
     },
