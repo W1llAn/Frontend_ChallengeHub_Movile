@@ -3,6 +3,9 @@ export interface AuthUser {
   email?: string;
   picture?: string;
   sub?: string;
+  nickname?: string;
+  updated_at?: string;
+  [key: string]: any; // Para permitir campos personalizados de Auth0
 }
 
 export interface AuthContextType {
