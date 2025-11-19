@@ -65,8 +65,6 @@ function RootLayoutNav() {
   // Redirigir según el estado de autenticación
   useEffect(() => {
     if (!loading) {
-      console.log("🔄 Verificando redirección:", { isSignedIn, loading });
-
       if (isSignedIn) {
         router.replace("/(tabs)");
       } else {
