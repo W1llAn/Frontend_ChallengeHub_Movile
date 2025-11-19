@@ -31,7 +31,7 @@ export default function TabLayout() {
       await logout();
       router.replace("/login");
     } catch (error) {
-      console.error("TabLayout: Error al cerrar sesión:", error);
+      router.replace("/login");
     }
   };
 
@@ -53,14 +53,9 @@ export default function TabLayout() {
           fontWeight: "400",
         },
         header: () => (
-          <TopAppBar
-            title="ChallengeHub"
-            onNotificationPress={() => console.log("Notifications pressed")}
-            onLogoutPress={handleLogout}
-          />
+          <TopAppBar title="ChallengeHub" onLogoutPress={handleLogout} />
         ),
-      }}
-    >
+      }}>
       <Tabs.Screen
         name="index"
         options={{
@@ -94,13 +89,6 @@ export default function TabLayout() {
         options={{
           title: "Perfil",
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
-        }}
-      />
-      {/* Hidden tabs - legacy screens */}
-      <Tabs.Screen
-        name="two"
-        options={{
-          href: null, // Hide from tab bar
         }}
       />
     </Tabs>
