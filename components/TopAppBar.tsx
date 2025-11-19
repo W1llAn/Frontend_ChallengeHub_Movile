@@ -33,11 +33,7 @@ export default function TopAppBar({
       if (confirmed) {
         if (onLogoutPress) {
           onLogoutPress();
-        } else {
-          console.log("onLogoutPress no está definido!");
         }
-      } else {
-        console.log("Logout cancelado");
       }
     } else {
       // En mobile usar Alert nativo
@@ -48,17 +44,13 @@ export default function TopAppBar({
           {
             text: "Cancelar",
             style: "cancel",
-            onPress: () => console.log("Logout cancelado"),
           },
           {
             text: "Cerrar Sesión",
             style: "destructive",
             onPress: () => {
-              console.log("✅ Confirmado logout, ejecutando onLogoutPress...");
               if (onLogoutPress) {
                 onLogoutPress();
-              } else {
-                console.log("onLogoutPress no está definido!");
               }
             },
           },
@@ -85,8 +77,7 @@ export default function TopAppBar({
             style={({ pressed }) => [
               styles.iconButton,
               { opacity: pressed ? 0.7 : 1 },
-            ]}
-          >
+            ]}>
             <FontAwesome name="bell-o" size={24} color={colors.text} />
           </Pressable>
         )}
@@ -96,8 +87,7 @@ export default function TopAppBar({
             style={({ pressed }) => [
               styles.iconButton,
               { opacity: pressed ? 0.7 : 1 },
-            ]}
-          >
+            ]}>
             <Ionicons name="log-out-outline" size={26} color={colors.error} />
           </Pressable>
         )}
