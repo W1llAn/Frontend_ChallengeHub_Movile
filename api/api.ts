@@ -1,16 +1,15 @@
 // api/api.ts
-import { useEffect } from "react";
 import axios, {
-  AxiosError,
-  type AxiosRequestHeaders,
+  type AxiosError,
+  type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from "axios";
-import { useAuth } from "../contexts/AuthContext";
 import { showNotifier } from "../services/notifier";
 import type { ErrorResponseData } from "../types/api/api.type";
 
-//Base URL desde variables de entorno de Expo
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE;
+// Base URL desde variables de entorno de Expo (fallback a localhost)
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE || "http://localhost:8080/api";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -55,40 +54,60 @@ const extractErrorMessage = (error: AxiosError<any>) => {
   return "Ocurrió un error. Intenta nuevamente.";
 };
 
-// 🔹 Configurar interceptores del API
-export const setupApiInterceptors = (
-  accessToken: string | null,
-  logout: () => void
+// 🔹 Configurar interceptores del API - Similar a web
+// getAccessTokenSilently debe ser una función que devuelve Promise<string>
+export const attachAuthInterceptor = (
+  getAccessTokenSilently: () => Promise<string | null>
 ) => {
-  // Interceptor de REQUEST: agrega el Bearer token si existe
+  // Request interceptor: obtiene token de forma ASINCRÓNICA antes de cada petición
   api.interceptors.request.use(
-    (config: InternalAxiosRequestConfig<any>) => {
-      if (accessToken) {
-        if (!config.headers) {
-          config.headers = {} as AxiosRequestHeaders;
-        }
-        (
-          config.headers as AxiosRequestHeaders
-        ).Authorization = `Bearer ${accessToken}`;
+    async (config: InternalAxiosRequestConfig<any>) => {
+      try {
+        const token = await getAccessTokenSilently();
 
-        const tokenParts = accessToken.split(".");
-        const tokenType =
-          tokenParts.length === 3
-            ? "JWT"
-            : tokenParts.length === 5
-            ? "JWE"
-            : "Unknown";
-        console.log("Request:", config.method?.toUpperCase(), config.url);
-        console.log("Token Type:", tokenType);
-      } else {
-        console.warn("No accessToken available");
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+
+          // Logs útiles para debugging
+          const tokenParts = token.split(".");
+          const tokenType =
+            tokenParts.length === 3
+              ? "JWS/JWT"
+              : tokenParts.length === 5
+              ? "JWE"
+              : "Unknown";
+
+          // Mostrar logs sin exponer token completo (mask)
+          const masked =
+            token.length > 20
+              ? `${token.substring(0, 8)}...${token.substring(
+                  token.length - 6
+                )}`
+              : token;
+
+          console.log("\n========== API REQUEST ==========");
+          console.log(
+            "Método:",
+            (config.method || "").toString().toUpperCase()
+          );
+          console.log("URL:", config.url);
+          console.log("Token Type:", tokenType);
+          console.log("Token (masked):", masked);
+          console.log("Token (full):", token); // Para debugging completo
+          console.log("================================\n");
+        } else {
+          console.warn("⚠️ No token available for this request");
+        }
+      } catch (err) {
+        console.error("❌ Error obteniendo token:", err);
+        // No agregar header si falla obtener token
       }
       return config;
     },
     (error) => Promise.reject(error)
   );
 
-  // Interceptor de RESPONSE: manejo centralizado de errores + notifier
+  // Response interceptor: manejo centralizado de errores
   api.interceptors.response.use(
     (response) => response,
     (error: AxiosError<any>) => {
@@ -97,7 +116,7 @@ export const setupApiInterceptors = (
 
       if (status === 401) {
         showNotifier(message, "error");
-        logout();
+        // El logout se maneja desde el componente al detectar isSignedIn = false
       } else if (status && status >= 400 && status < 500) {
         showNotifier(message || "Error en la solicitud.", "warn");
       } else if (status && status >= 500) {
@@ -114,13 +133,4 @@ export const setupApiInterceptors = (
   );
 };
 
-// 🔹 Hook que configura los interceptores automáticamente
-export const useApi = () => {
-  const { accessToken, logout } = useAuth();
-
-  useEffect(() => {
-    setupApiInterceptors(accessToken, logout);
-  }, [accessToken, logout]);
-
-  return api;
-};
+export default api;
