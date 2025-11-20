@@ -25,11 +25,6 @@ export interface UseUsersReturn {
   clearError: () => void;
 }
 
-/**
- * Hook para manejar la lógica de usuarios
- * Obtiene automáticamente el usuario completo de Auth0 y backend
- * @returns Objeto con estado y métodos para manejar usuarios
- */
 export const useUsers = (): UseUsersReturn => {
   const { completeUser, user: authUser, authError } = useAuth();
   const [currentUser, setCurrentUser] = useState<UserResponseDTO | null>(null);
@@ -37,15 +32,14 @@ export const useUsers = (): UseUsersReturn => {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ===== NUEVA LÓGICA: Sincronizar usuario completo del contexto =====
   useEffect(() => {
     if (completeUser) {
       setCurrentUser(completeUser);
       setError(null); // Limpiar error cuando se carga exitosamente
-      console.log("✅ Usuario sincronizado desde AuthContext:", completeUser);
+      console.log("Usuario sincronizado desde AuthContext:", completeUser);
     } else if (authError) {
       setError(authError);
-      console.error("❌ Error en AuthContext:", authError);
+      console.error("Error en AuthContext:", authError);
     }
   }, [completeUser, authError]);
 
