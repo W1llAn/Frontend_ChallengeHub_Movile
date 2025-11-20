@@ -1,25 +1,32 @@
-// api/api.ts
-import axios, {
-  type AxiosError,
-  type AxiosRequestConfig,
-  type InternalAxiosRequestConfig,
-} from "axios";
+// src/api/api.ts
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import { showNotifier } from "../services/notifier";
 import type { ErrorResponseData } from "../types/api/api.type";
 
-// Base URL desde variables de entorno de Expo (fallback a localhost)
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE || "http://localhost:8080/api";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE;
+const ACCESS_TOKEN_KEY = "accessToken";
 
-export const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: {
-    "ngrok-skip-browser-warning": "true",
-  },
-});
+const getTokenFromStorage = async (): Promise<string | null> => {
+  try {
+    if (Platform.OS === "web") {
+      return localStorage.getItem(ACCESS_TOKEN_KEY);
+    } else {
+      return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+    }
+  } catch (err) {
+    console.warn("getTokenFromStorage error:", err);
+    return null;
+  }
+};
 
-// 🔹 Helper para extraer mensaje de error del backend
+const maskToken = (token: string | null | undefined) => {
+  if (!token) return null;
+  if (token.length <= 20) return token;
+  return `${token.substring(0, 8)}...${token.substring(token.length - 6)}`;
+};
+
 const extractErrorMessage = (error: AxiosError<any>) => {
   const data = error.response?.data as ErrorResponseData | any;
 
@@ -54,83 +61,93 @@ const extractErrorMessage = (error: AxiosError<any>) => {
   return "Ocurrió un error. Intenta nuevamente.";
 };
 
-// 🔹 Configurar interceptores del API - Similar a web
-// getAccessTokenSilently debe ser una función que devuelve Promise<string>
-export const attachAuthInterceptor = (
-  getAccessTokenSilently: () => Promise<string | null>
-) => {
-  // Request interceptor: obtiene token de forma ASINCRÓNICA antes de cada petición
-  api.interceptors.request.use(
-    async (config: InternalAxiosRequestConfig<any>) => {
-      try {
-        const token = await getAccessTokenSilently();
-
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-
-          // Logs útiles para debugging
-          const tokenParts = token.split(".");
-          const tokenType =
-            tokenParts.length === 3
-              ? "JWS/JWT"
-              : tokenParts.length === 5
-              ? "JWE"
-              : "Unknown";
-
-          // Mostrar logs sin exponer token completo (mask)
-          const masked =
-            token.length > 20
-              ? `${token.substring(0, 8)}...${token.substring(
-                  token.length - 6
-                )}`
-              : token;
-
-          console.log("\n========== API REQUEST ==========");
-          console.log(
-            "Método:",
-            (config.method || "").toString().toUpperCase()
-          );
-          console.log("URL:", config.url);
-          console.log("Token Type:", tokenType);
-          console.log("Token (masked):", masked);
-          console.log("Token (full):", token); // Para debugging completo
-          console.log("================================\n");
-        } else {
-          console.warn("⚠️ No token available for this request");
-        }
-      } catch (err) {
-        console.error("❌ Error obteniendo token:", err);
-        // No agregar header si falla obtener token
-      }
-      return config;
+class ApiService {
+  private static _instance: ApiService | null = null;
+  public client = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 10000,
+    headers: {
+      "ngrok-skip-browser-warning": "true",
+      "Content-Type": "application/json",
     },
-    (error) => Promise.reject(error)
-  );
+  });
+  private interceptorsAttached = false;
 
-  // Response interceptor: manejo centralizado de errores
-  api.interceptors.response.use(
-    (response) => response,
-    (error: AxiosError<any>) => {
-      const status = error.response?.status;
-      const message = extractErrorMessage(error);
+  private constructor() {
+    this.attachInterceptorsOnce();
+  }
 
-      if (status === 401) {
-        showNotifier(message, "error");
-        // El logout se maneja desde el componente al detectar isSignedIn = false
-      } else if (status && status >= 400 && status < 500) {
-        showNotifier(message || "Error en la solicitud.", "warn");
-      } else if (status && status >= 500) {
-        showNotifier(
-          message || "Error del servidor, intenta más tarde.",
-          "error"
-        );
-      } else {
-        showNotifier(message, "error");
-      }
-
-      return Promise.reject(error);
+  public static getInstance(): ApiService {
+    if (!ApiService._instance) {
+      ApiService._instance = new ApiService();
     }
-  );
-};
+    return ApiService._instance;
+  }
 
-export default api;
+  private attachInterceptorsOnce() {
+    if (this.interceptorsAttached) return;
+
+    // Request interceptor: obtiene token desde storage justo antes de la petición
+    this.client.interceptors.request.use(
+      async (config: InternalAxiosRequestConfig<any>) => {
+        try {
+          const token = await getTokenFromStorage();
+          console.log("Token leído en interceptor:", maskToken(token));
+
+          if (token) {
+            config.headers = config.headers ?? {};
+            (config.headers as any).Authorization = `Bearer ${token}`;
+
+            // Información de debugging
+            const method = (config.method || "GET").toString().toUpperCase();
+            console.log("\n===== API REQUEST =====");
+            console.log("Method:", method);
+            console.log(
+              "URL:",
+              config.baseURL ? `${config.baseURL}${config.url}` : config.url
+            );
+            console.log("Token (masked):", maskToken(token));
+            console.log("=======================\n");
+          } else {
+            console.warn("⚠️ No token disponible en storage para la petición");
+          }
+        } catch (err) {
+          console.error("❌ Error en request interceptor:", err);
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Response interceptor para manejo centralizado de errores
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error: AxiosError<any>) => {
+        const status = error.response?.status;
+        const message = extractErrorMessage(error);
+
+        if (status === 401) {
+          showNotifier(message, "error");
+          // Si necesitas forzar logout, emite un evento aquí o usa otra estrategia.
+        } else if (status && status >= 400 && status < 500) {
+          showNotifier(message || "Error en la solicitud.", "warn");
+        } else if (status && status >= 500) {
+          showNotifier(
+            message || "Error del servidor, intenta más tarde.",
+            "error"
+          );
+        } else {
+          showNotifier(message, "error");
+        }
+
+        return Promise.reject(error);
+      }
+    );
+
+    this.interceptorsAttached = true;
+  }
+}
+
+const Api = ApiService.getInstance().client;
+export default Api;
+export { Api as api };
