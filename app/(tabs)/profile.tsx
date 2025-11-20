@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   StyleSheet,
   ScrollView,
@@ -35,6 +36,8 @@ export default function ProfileScreen() {
     loading,
     updating,
     updateCurrentUser,
+    fetchCurrentUser,
+    refreshCurrentUser,
     error: userError,
   } = useUsers();
 
@@ -114,10 +117,19 @@ export default function ProfileScreen() {
     ]);
   };
 
+  // Cargar datos del usuario cuando se entra a la pantalla
+  useFocusEffect(
+    useCallback(() => {
+      if (currentUser?.id) {
+        fetchCurrentUser(currentUser.id);
+      }
+    }, [currentUser?.id, fetchCurrentUser])
+  );
+
   // Refrescar datos
   const handleRefresh = async () => {
     setRefreshing(true);
-    // El hook se actualiza automáticamente desde AuthContext
+    await refreshCurrentUser();
     setRefreshing(false);
   };
 
@@ -225,7 +237,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>❌ Error al cargar el perfil</Text>
+          <Text style={styles.errorText}>Error al cargar el perfil</Text>
           <Text style={styles.errorText}>{errorMessage}</Text>
           <View style={styles.retryButton}>
             <Button
