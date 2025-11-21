@@ -65,11 +65,19 @@ class ApiService {
   private static _instance: ApiService | null = null;
   public client = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 10000,
-    headers: {
-      "ngrok-skip-browser-warning": "true",
-      "Content-Type": "application/json",
-    },
+    timeout: 20000,
+    // No añadir la cabecera personalizada en web: provoca preflight CORS extra
+    headers: (() => {
+      const base: Record<string, string> = { "Content-Type": "application/json" };
+      try {
+        if (Platform.OS !== "web") {
+          base["ngrok-skip-browser-warning"] = "true";
+        }
+      } catch (e) {
+        // En entornos donde Platform no esté disponible, no añadimos el header
+      }
+      return base;
+    })(),
   });
   private interceptorsAttached = false;
 
