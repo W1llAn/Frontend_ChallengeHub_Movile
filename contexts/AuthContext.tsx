@@ -13,6 +13,7 @@ import React, {
 import { Platform } from "react-native";
 import { AuthContextType, AuthUser } from "../types/auth/auth.type";
 import type { UserResponseDTO } from "../types/api/user.type";
+import { getUserById } from "../services/user.service";
 
 // Cierra auth session si es necesario
 WebBrowser.maybeCompleteAuthSession();
@@ -175,6 +176,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const storedCompleteUser = await storage.getItem("completeUser");
 
         if (token && storedUser) {
+          console.log("[Auth] Sesión encontrada en storage -> token (masked):", token ? token.substring(0, 8) + "..." : null);
+          console.log("[Auth] user (raw) desde storage:", storedUser);
+          console.log("[Auth] completeUser (raw) desde storage:", storedCompleteUser);
           setAccessToken(token);
           setUser(safeJsonParse(storedUser));
 
@@ -211,6 +215,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!token) return;
 
         try {
+          console.log("[Auth] response.success recibida:", response);
+          console.log("[Auth] token recibido (masked):", token ? token.substring(0, 8) + "..." : null);
+
           let userInfo = decodeToken(token);
 
           if (!userInfo) {
@@ -236,13 +243,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Actualizar estado local: el interceptor en api leerá el token desde storage.
+          console.log("[Auth] userInfo decodificado:", userInfo);
           setAccessToken(token);
           setUser(userInfo);
 
           // Guardar el userId para poder usarlo en profile
           const extractedUserId = extractUserIdFromSub(userInfo.sub);
           if (extractedUserId) {
+            console.log("[Auth] userId extraído del sub:", extractedUserId);
             setUserId(extractedUserId);
+          } else {
+            console.warn("[Auth] No se pudo extraer userId del sub:", userInfo.sub);
+          }
+
+          // Intentar obtener el perfil completo desde el backend y guardarlo en state/storage
+          try {
+            if (extractedUserId) {
+              console.log("[Auth] Intentando obtener perfil completo desde backend para id:", extractedUserId);
+              const backendUser = await getUserById(extractedUserId);
+              if (backendUser) {
+                console.log("[Auth] Perfil completo obtenido desde backend:", backendUser);
+                setCompleteUser(backendUser);
+                try {
+                  await storage.setItem("completeUser", JSON.stringify(backendUser));
+                } catch (storeErr) {
+                  console.warn("[Auth] No se pudo guardar completeUser en storage:", storeErr);
+                }
+              } else {
+                console.warn("[Auth] Backend no devolvió perfil para id:", extractedUserId);
+              }
+            }
+          } catch (err) {
+            console.error("[Auth] Error al obtener perfil completo desde backend:", err);
           }
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err);
