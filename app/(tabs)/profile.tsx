@@ -29,8 +29,7 @@ export default function ProfileScreen() {
   const colorScheme = (useColorScheme() ?? "light") as "light" | "dark";
   const colors = Colors[colorScheme];
 
-  // Auth y User hooks - Solo necesitamos el logout y el error
-  const { logout, authError } = useAuth();
+  const { logout, authError, user } = useAuth();
   const {
     currentUser,
     loading,
@@ -117,21 +116,50 @@ export default function ProfileScreen() {
     ]);
   };
 
-  // Cargar datos del usuario cuando se entra a la pantalla
+  // Cargar datos del usuario cuando se entra a la pantalla - CORREGIDO
   useFocusEffect(
     useCallback(() => {
-      if (currentUser?.id) {
-        fetchCurrentUser(currentUser.id);
-      }
-    }, [currentUser?.id, fetchCurrentUser])
+      let isActive = true;
+
+      const loadUserData = async () => {
+        try {
+          // Si ya tenemos currentUser, no necesitamos recargar a menos que esté refrescando
+          if (currentUser?.id && !refreshing) {
+            return;
+          }
+
+          // Si tenemos el usuario del contexto auth, usamos ese ID
+          if (user?.id && isActive && !currentUser) {
+            await fetchCurrentUser(user.id);
+          }
+          // O si ya tenemos currentUser pero queremos refrescar
+          else if (currentUser?.id && isActive && refreshing) {
+            await refreshCurrentUser();
+          }
+        } catch (error) {
+          console.error("Error loading user data:", error);
+        }
+      };
+
+      loadUserData();
+
+      return () => {
+        isActive = false;
+      };
+    }, [user?.id, currentUser, refreshing, fetchCurrentUser, refreshCurrentUser])
   );
 
-  // Refrescar datos
-  const handleRefresh = async () => {
+  // Refrescar datos - CORREGIDO
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refreshCurrentUser();
-    setRefreshing(false);
-  };
+    try {
+      await refreshCurrentUser();
+    } catch (error) {
+      console.error("Error refreshing:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshCurrentUser]);
 
   const styles = StyleSheet.create({
     safeArea: {
