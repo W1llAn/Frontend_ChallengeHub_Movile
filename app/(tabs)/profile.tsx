@@ -7,10 +7,13 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, View } from "@/components/Themed";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
+import { useFormValidation, validationRules } from "@/hooks/useFormValidation";
 import { showNotifier } from "@/services/notifier";
+import { countriesService } from "@/services/countries.service";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
 import {
@@ -22,12 +25,16 @@ import {
   LoadingSpinner,
   InfoRow,
   Badge,
+  Select,
+  DatePickerInput,
 } from "@/components/UI";
 import type { UserItselfUpdateDTO } from "@/types/api/user.type";
+import type { Country } from "@/services/countries.service";
 
 export default function ProfileScreen() {
   const colorScheme = (useColorScheme() ?? "light") as "light" | "dark";
   const colors = Colors[colorScheme];
+  const insets = useSafeAreaInsets();
 
   const { logout, authError, user } = useAuth();
   const {
@@ -43,26 +50,89 @@ export default function ProfileScreen() {
   // Estado local de edición
   const [isEditing, setIsEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(false);
+  const [originalFormData, setOriginalFormData] = useState<UserItselfUpdateDTO | null>(null);
   const [formData, setFormData] = useState<UserItselfUpdateDTO>({
+    username: "",
+    email: "",
     description: "",
     location: "",
     birthDate: "",
-    profileStatus: "",
+    profileStatus: "public",
     avatarUrl: undefined,
   });
+  const { errors, validateForm, setFieldError, getFieldError, clearErrors } = useFormValidation();
+  const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Inicializar formulario cuando se carga el usuario
+  // Cargar países cuando entra a edición
   useEffect(() => {
-    if (currentUser && !isEditing) {
-      setFormData({
+    if (isEditing && countries.length === 0) {
+      loadCountries();
+    }
+  }, [isEditing, countries.length]);
+
+  // Inicializar formulario cuando se carga el usuario (sin clearErrors en dependencias)
+  useEffect(() => {
+    if (currentUser && !isEditing && !hasInitialized) {
+      const initialData: UserItselfUpdateDTO = {
+        username: currentUser.username || "",
+        email: currentUser.email || "",
         description: currentUser.description || "",
         location: currentUser.location || "",
         birthDate: currentUser.birthDate || "",
-        profileStatus: currentUser.profileStatus || "",
+        profileStatus:
+          currentUser.profileStatus === "PRIVATE" ? "private" : "public",
         avatarUrl: currentUser.avatarUrl || undefined,
-      });
+      };
+      setFormData(initialData);
+      setHasInitialized(true);
     }
-  }, [currentUser, isEditing]);
+  }, [currentUser, isEditing, hasInitialized]);
+
+  // Resetear hasInitialized cuando entra a edición
+  useEffect(() => {
+    if (!isEditing) {
+      setHasInitialized(false);
+    }
+  }, [isEditing]);
+
+  // Cuando se cargan los países y el usuario tiene ubicación guardada, seleccionarla automáticamente
+  useEffect(() => {
+    if (
+      isEditing &&
+      countries.length > 0 &&
+      currentUser?.location &&
+      !loadingCountries
+    ) {
+      // Intentar encontrar el país en la lista
+      const countryExists = countries.some(
+        (country) => country.name === currentUser.location
+      );
+
+      // Si el país existe en la lista, se mantiene en formData
+      // Si no existe, el usuario tendrá que seleccionar uno
+      if (!countryExists && formData.location === currentUser.location) {
+        console.log(
+          "El país del usuario no se encontró en la lista:",
+          currentUser.location
+        );
+      }
+    }
+  }, [isEditing, countries.length, currentUser?.location, loadingCountries, formData.location]);
+
+  const loadCountries = async () => {
+    try {
+      setLoadingCountries(true);
+      const data = await countriesService.getCountries();
+      setCountries(data);
+    } catch (error) {
+      console.error("Error cargando países:", error);
+      showNotifier("Error al cargar lista de países", "warn");
+    } finally {
+      setLoadingCountries(false);
+    }
+  };
 
   // Manejar cambio en inputs
   const handleInputChange = (
@@ -73,13 +143,62 @@ export default function ProfileScreen() {
       ...prev,
       [field]: value,
     }));
+    // Limpiar error del campo cuando el usuario empieza a escribir
+    setFieldError(field, null);
   };
 
   // Guardar cambios
   const handleSaveProfile = async () => {
-    if (!formData.description.trim()) {
-      showNotifier("La descripción es requerida", "warn");
+    // Definir reglas de validación
+    const rules = {
+      username: [
+        validationRules.required("El nombre de usuario es requerido"),
+        validationRules.username(),
+      ],
+      email: [
+        validationRules.required("El correo es requerido"),
+        validationRules.email(),
+      ],
+      description: [
+        validationRules.required("La descripción es requerida"),
+        validationRules.minLength(
+          10,
+          "La descripción debe tener al menos 10 caracteres"
+        ),
+        validationRules.maxLength(
+          500,
+          "La descripción no puede exceder 500 caracteres"
+        ),
+      ],
+      location: [
+        validationRules.required("La ubicación es requerida"),
+      ],
+      birthDate: [
+        validationRules.required("La fecha de nacimiento es requerida"),
+        validationRules.date("Formato de fecha inválido"),
+        validationRules.birthDate(),
+        validationRules.notFutureDate(),
+      ],
+    };
+
+    // Validar formulario
+    if (!validateForm(formData, rules)) {
+      showNotifier("Por favor, revisa los errores del formulario", "warn");
       return;
+    }
+
+    // Guardar datos originales para resetear si es necesario
+    if (!originalFormData && currentUser) {
+      setOriginalFormData({
+        username: currentUser.username || "",
+        email: currentUser.email || "",
+        description: currentUser.description || "",
+        location: currentUser.location || "",
+        birthDate: currentUser.birthDate || "",
+        profileStatus:
+          currentUser.profileStatus === "PRIVATE" ? "private" : "public",
+        avatarUrl: currentUser.avatarUrl || undefined,
+      });
     }
 
     const success = await updateCurrentUser(formData);
@@ -89,18 +208,55 @@ export default function ProfileScreen() {
   };
 
   // Cancelar edición
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     if (currentUser) {
       setFormData({
+        username: currentUser.username || "",
+        email: currentUser.email || "",
         description: currentUser.description || "",
         location: currentUser.location || "",
         birthDate: currentUser.birthDate || "",
-        profileStatus: currentUser.profileStatus || "",
+        profileStatus:
+          currentUser.profileStatus === "PRIVATE" ? "private" : "public",
         avatarUrl: currentUser.avatarUrl || undefined,
       });
     }
+    clearErrors();
     setIsEditing(false);
-  };
+  }, [currentUser, clearErrors]);
+
+  // Resetear formulario a datos originales
+  const handleResetForm = useCallback(() => {
+    Alert.alert(
+      "Resetear formulario",
+      "¿Deseas descartar los cambios y volver a los datos originales?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Resetear",
+          onPress: () => {
+            if (currentUser) {
+              setFormData({
+                username: currentUser.username || "",
+                email: currentUser.email || "",
+                description: currentUser.description || "",
+                location: currentUser.location || "",
+                birthDate: currentUser.birthDate || "",
+                profileStatus:
+                  currentUser.profileStatus === "PRIVATE"
+                    ? "private"
+                    : "public",
+                avatarUrl: currentUser.avatarUrl || undefined,
+              });
+              clearErrors();
+              showNotifier("Formulario reseteado", "success");
+            }
+          },
+          style: "destructive",
+        },
+      ]
+    );
+  }, [currentUser, clearErrors]);
 
   // Cerrar sesión
   const handleLogout = () => {
@@ -146,7 +302,13 @@ export default function ProfileScreen() {
       return () => {
         isActive = false;
       };
-    }, [user?.id, currentUser, refreshing, fetchCurrentUser, refreshCurrentUser])
+    }, [
+      user?.id,
+      currentUser,
+      refreshing,
+      fetchCurrentUser,
+      refreshCurrentUser,
+    ])
   );
 
   // Refrescar datos - CORREGIDO
@@ -305,7 +467,7 @@ export default function ProfileScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }>
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
           {/* Avatar Section */}
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>
@@ -392,6 +554,12 @@ export default function ProfileScreen() {
             {!isEditing ? (
               // View Mode
               <Card>
+                {currentUser.username && (
+                  <InfoRow label="Usuario" value={currentUser.username} />
+                )}
+                {currentUser.email && (
+                  <InfoRow label="Email" value={currentUser.email} />
+                )}
                 {currentUser.description && (
                   <InfoRow
                     label="Descripción"
@@ -423,54 +591,117 @@ export default function ProfileScreen() {
               </Card>
             ) : (
               // Edit Mode
-              <Card style={styles.infoCard}>
-                <Input
-                  label="Descripción"
-                  placeholder="Cuéntanos sobre ti..."
-                  value={formData.description}
-                  onChangeText={(value) =>
-                    handleInputChange("description", value)
-                  }
-                  multiline
-                  numberOfLines={4}
-                />
-              </Card>
-            )}
-
-            {isEditing && (
               <>
                 <Card style={styles.infoCard}>
                   <Input
-                    label="Ubicación"
-                    placeholder="Tu ciudad o país"
-                    value={formData.location}
+                    label="Nombre de Usuario"
+                    placeholder="Tu nombre de usuario"
+                    value={formData.username}
                     onChangeText={(value) =>
-                      handleInputChange("location", value)
+                      handleInputChange("username", value)
                     }
+                    error={getFieldError("username")}
                   />
                 </Card>
 
                 <Card style={styles.infoCard}>
                   <Input
-                    label="Fecha de Nacimiento"
-                    placeholder="YYYY-MM-DD"
-                    value={formData.birthDate}
+                    label="Correo Electrónico"
+                    placeholder="Tu correo"
+                    value={formData.email}
+                    onChangeText={(value) => handleInputChange("email", value)}
+                    keyboardType="email-address"
+                    error={getFieldError("email")}
+                  />
+                </Card>
+
+                <Card style={styles.infoCard}>
+                  <Input
+                    label="Descripción"
+                    placeholder="Cuéntanos sobre ti... (10-500 caracteres)"
+                    value={formData.description}
                     onChangeText={(value) =>
+                      handleInputChange("description", value)
+                    }
+                    multiline
+                    numberOfLines={4}
+                    error={getFieldError("description")}
+                  />
+                  {formData.description && (
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color:
+                          formData.description.length > 500
+                            ? Colors[colorScheme].error
+                            : Colors[colorScheme].textTertiary,
+                        marginTop: 4,
+                      }}
+                    >
+                      {formData.description.length}/500
+                    </Text>
+                  )}
+                </Card>
+
+                <Card style={styles.infoCard}>
+                  {loadingCountries ? (
+                    <LoadingSpinner message="Cargando países..." />
+                  ) : (
+                    <Select
+                      label="Ubicación (País)"
+                      placeholder="Seleccionar país"
+                      value={formData.location}
+                      onValueChange={(value) =>
+                        handleInputChange("location", value)
+                      }
+                      options={countries.map((country) => ({
+                        label: country.name,
+                        value: country.name,
+                      }))}
+                      error={getFieldError("location")}
+                    />
+                  )}
+                </Card>
+
+                <Card style={styles.infoCard}>
+                  <DatePickerInput
+                    label="Fecha de Nacimiento"
+                    placeholder="Seleccionar fecha"
+                    value={formData.birthDate}
+                    onDateChange={(value) =>
                       handleInputChange("birthDate", value)
                     }
+                    error={getFieldError("birthDate")}
                   />
                 </Card>
 
                 <Card style={styles.infoCard}>
-                  <Input
+                  <Select
                     label="Estado de Perfil"
-                    placeholder="ACTIVE, INACTIVE, etc."
+                    placeholder="Seleccionar estado"
                     value={formData.profileStatus}
-                    onChangeText={(value) =>
+                    onValueChange={(value) =>
                       handleInputChange("profileStatus", value)
                     }
+                    options={[
+                      { label: "Público", value: "public" },
+                      { label: "Privado", value: "private" },
+                    ]}
                   />
                 </Card>
+
+                {/* Botones adicionales */}
+                <View style={styles.buttonRow}>
+                  <View style={styles.buttonFlex}>
+                    <Button
+                      label="Resetear"
+                      onPress={handleResetForm}
+                      variant="outline"
+                      fullWidth
+                      disabled={updating}
+                    />
+                  </View>
+                </View>
               </>
             )}
           </View>
