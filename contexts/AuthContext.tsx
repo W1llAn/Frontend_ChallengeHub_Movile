@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.tsx
 import * as AuthSession from "expo-auth-session";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
@@ -11,11 +12,68 @@ import React, {
 } from "react";
 import { Platform } from "react-native";
 import { AuthContextType, AuthUser } from "../types/auth/auth.type";
+import type { UserResponseDTO } from "../types/api/user.type";
+import { getUserById } from "../services/user.service";
 
-// Configurar WebBrowser para cerrar automáticamente después del login
+// Cierra auth session si es necesario
 WebBrowser.maybeCompleteAuthSession();
 
-// ===== STORAGE HELPERS (Web + Mobile) =====
+const ACCESS_TOKEN_KEY = "accessToken";
+
+// ===== Utils =====
+const safeJsonParse = (s: string | null) => {
+  try {
+    return s ? JSON.parse(s) : null;
+  } catch {
+    return null;
+  }
+};
+
+// decodeToken robusto (intenta Buffer, atob, etc.)
+const decodeToken = (token: string) => {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+
+    // Try Buffer (Node / some RN setups)
+    try {
+      // @ts-ignore Buffer may or may not exist
+      if (typeof Buffer !== "undefined" && Buffer.from) {
+        const decoded = JSON.parse(
+          Buffer.from(payload, "base64").toString("utf-8")
+        );
+        return decoded;
+      }
+    } catch {
+      // fallback
+    }
+
+    // Try atob + decodeURIComponent
+    try {
+      const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+      const str =
+        typeof atob === "function" ? atob(b64) : globalThis.atob?.(b64);
+      if (!str) return null;
+      // Convert binary string to utf-8
+      const utf8 = decodeURIComponent(
+        Array.prototype.map
+          .call(str, (c: string) => {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join("")
+      );
+      return JSON.parse(utf8);
+    } catch (e) {
+      return null;
+    }
+  } catch (error) {
+    console.error("Error decodificando token:", error);
+    return null;
+  }
+};
+
+// Storage helpers (web + mobile)
 const storage = {
   async setItem(key: string, value: string) {
     if (Platform.OS === "web") {
@@ -40,191 +98,239 @@ const storage = {
   },
 };
 
-// ===== CONFIGURACIÓN DE AUTH0 =====
+// Auth0 config (usa tu expoConfig.extra)
 const auth0Domain =
   Constants.expoConfig?.extra?.auth0Domain || "YOUR_AUTH0_DOMAIN";
 const auth0ClientId =
   Constants.expoConfig?.extra?.auth0ClientId || "YOUR_AUTH0_CLIENT_ID";
+const auth0Audience =
+  Constants.expoConfig?.extra?.auth0Audience || "YOUR_AUTH0_AUDIENCE";
 
-// ===== DETECTAR ENTORNO =====
 const isExpoGo =
   Constants.appOwnership === "expo" ||
   Constants.executionEnvironment === "storeClient";
 
-// Generar redirectUri dinámico según entorno
 let redirectUri: string;
-
 if (isExpoGo) {
-  // Para Expo Go (trabajo remoto): usar proxy de Expo
-  // Esto genera una URI consistente: https://auth.expo.io/@owner/slug
-  // @ts-ignore - useProxy no está tipado pero funciona
-  redirectUri = AuthSession.makeRedirectUri({
-    useProxy: true,
-  });
-
-  // Si falla, usar URI manual basada en el owner y slug del proyecto
+  try {
+    redirectUri = AuthSession.makeRedirectUri({ useProxy: true } as any);
+  } catch {
+    const owner = Constants.expoConfig?.owner || "anonymous";
+    const slug = Constants.expoConfig?.slug || "ChallengeHubMobile";
+    redirectUri = `https://auth.expo.io/@${owner}/${slug}`;
+  }
   if (!redirectUri) {
     const owner = Constants.expoConfig?.owner || "anonymous";
     const slug = Constants.expoConfig?.slug || "ChallengeHubMobile";
     redirectUri = `https://auth.expo.io/@${owner}/${slug}`;
   }
 } else {
-  // En build nativa: usar esquema propio
   redirectUri = AuthSession.makeRedirectUri({
     scheme: "frontendchallengehubmovile",
     path: "auth",
   });
-
   if (!redirectUri) {
     redirectUri = "challengeHub://auth";
   }
 }
 
-console.log("=== Configuración de Auth0 ===");
-console.log("Entorno:", isExpoGo ? "Expo Go" : "Build nativa");
-console.log("Redirect URI usada:", redirectUri);
-console.log("=============================");
-
-// ===== DISCOVERY AUTH0 =====
 const discovery = {
   authorizationEndpoint: `https://${auth0Domain}/authorize`,
   tokenEndpoint: `https://${auth0Domain}/oauth/token`,
   revocationEndpoint: `https://${auth0Domain}/oauth/revoke`,
 };
 
-// ===== CONTEXTO =====
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const extractUserIdFromSub = (sub: string | undefined): number | null => {
+  if (!sub) return null;
+  try {
+    const parts = sub.split("|");
+    if (parts.length >= 2) {
+      const id = parseInt(parts[parts.length - 1], 10);
+      return isNaN(id) ? null : id;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error extrayendo ID del sub:", error);
+    return null;
+  }
+};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [completeUser, setCompleteUser] = useState<UserResponseDTO | null>(
+    null
+  );
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
 
-  // Cargar sesión almacenada al iniciar
+  // Al iniciar, cargar sesión desde storage
   useEffect(() => {
     (async () => {
       try {
-        const token = await storage.getItem("accessToken");
+        const token = await storage.getItem(ACCESS_TOKEN_KEY);
         const storedUser = await storage.getItem("user");
-
-        console.log("Cargando sesión:", {
-          hasToken: !!token,
-          hasUser: !!storedUser,
-        });
+        const storedCompleteUser = await storage.getItem("completeUser");
 
         if (token && storedUser) {
+          console.log("[Auth] Sesión encontrada en storage -> token (masked):", token ? token.substring(0, 8) + "..." : null);
+          console.log("[Auth] user (raw) desde storage:", storedUser);
+          console.log("[Auth] completeUser (raw) desde storage:", storedCompleteUser);
           setAccessToken(token);
-          setUser(JSON.parse(storedUser));
+          setUser(safeJsonParse(storedUser));
+
+          if (storedCompleteUser) {
+            setCompleteUser(safeJsonParse(storedCompleteUser));
+          }
         }
       } catch (error) {
-        console.log("Error loading session:", error);
+        // ignore
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  // Crear Auth Request
+  // AuthRequest
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: auth0ClientId,
       redirectUri,
       scopes: ["openid", "profile", "email"],
       responseType: AuthSession.ResponseType.Token,
+      extraParams: {
+        audience: auth0Audience,
+      },
     },
     discovery
   );
 
-  // Manejar respuesta de Auth0
   useEffect(() => {
     const handleAuth = async () => {
-      if (response?.type === "success" && response.params.access_token) {
-        const token = response.params.access_token;
+      if (response?.type === "success") {
+        const token = response.params.id_token || response.params.access_token;
+        if (!token) return;
+
         try {
-          const userInfoResponse = await fetch(
-            `https://${auth0Domain}/userinfo`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          const userInfo = await userInfoResponse.json();
+          console.log("[Auth] response.success recibida:", response);
+          console.log("[Auth] token recibido (masked):", token ? token.substring(0, 8) + "..." : null);
 
-          console.log("Usuario autenticado:", userInfo);
+          let userInfo = decodeToken(token);
 
-          // Guardar en storage (localStorage para web, SecureStore para mobile)
-          try {
-            await storage.setItem("accessToken", token);
-            await storage.setItem("user", JSON.stringify(userInfo));
-            console.log("Credenciales guardadas correctamente");
-          } catch (storeError) {
-            console.log("Error guardando en storage:", storeError);
+          if (!userInfo) {
+            const userInfoResponse = await fetch(
+              `https://${auth0Domain}/userinfo`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+            if (userInfoResponse.status !== 200) {
+              setAuthError("No se pudo obtener userinfo desde Auth0");
+              return;
+            }
+            userInfo = await userInfoResponse.json();
           }
 
+          // ===== GUARDAR token en storage ANTES de pedir datos al backend =====
+          try {
+            await storage.setItem(ACCESS_TOKEN_KEY, token);
+            await storage.setItem("user", JSON.stringify(userInfo));
+          } catch (storeErr) {
+            console.warn("No se pudo guardar token en storage:", storeErr);
+          }
+
+          // Actualizar estado local: el interceptor en api leerá el token desde storage.
+          console.log("[Auth] userInfo decodificado:", userInfo);
           setAccessToken(token);
           setUser(userInfo);
-        } catch (error) {
-          console.log("Error fetching user info:", error);
+
+          // Guardar el userId para poder usarlo en profile
+          const extractedUserId = extractUserIdFromSub(userInfo.sub);
+          if (extractedUserId) {
+            console.log("[Auth] userId extraído del sub:", extractedUserId);
+            setUserId(extractedUserId);
+          } else {
+            console.warn("[Auth] No se pudo extraer userId del sub:", userInfo.sub);
+          }
+
+          // Intentar obtener el perfil completo desde el backend y guardarlo en state/storage
+          try {
+            if (extractedUserId) {
+              console.log("[Auth] Intentando obtener perfil completo desde backend para id:", extractedUserId);
+              const backendUser = await getUserById(extractedUserId);
+              if (backendUser) {
+                console.log("[Auth] Perfil completo obtenido desde backend:", backendUser);
+                setCompleteUser(backendUser);
+                try {
+                  await storage.setItem("completeUser", JSON.stringify(backendUser));
+                } catch (storeErr) {
+                  console.warn("[Auth] No se pudo guardar completeUser en storage:", storeErr);
+                }
+              } else {
+                console.warn("[Auth] Backend no devolvió perfil para id:", extractedUserId);
+              }
+            }
+          } catch (err) {
+            console.error("[Auth] Error al obtener perfil completo desde backend:", err);
+          }
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          console.error("Error en handleAuth:", errorMsg);
+          setAuthError(errorMsg);
         }
       } else if (response?.type === "error") {
-        console.log("Error en autenticación:", response.error);
+        const errorMsg =
+          response?.params?.error || "Error desconocido en Auth0";
+        console.error("❌ Error en respuesta de Auth0:", errorMsg);
+        setAuthError(errorMsg);
       }
     };
+
     handleAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [response]);
 
-  // Iniciar sesión
   const login = async () => {
-    console.log("Iniciando login...");
-    console.log("🔗 Redirect URI usada:", redirectUri);
-
-    // En Expo Go usamos el proxy, en build nativa no
-    // @ts-ignore - useProxy no está tipado pero funciona en Expo Go
-    await promptAsync(isExpoGo ? { useProxy: true } : {});
+    setAuthError(null);
+    await promptAsync({} as any);
   };
 
-  // Cerrar sesión (local + Auth0)
   const logout = async () => {
     try {
-      // 1. Cerrar sesión en Auth0 primero
       const logoutUrl = `https://${auth0Domain}/v2/logout?client_id=${auth0ClientId}&returnTo=${encodeURIComponent(
         redirectUri
       )}`;
 
       if (Platform.OS === "web") {
-        // En web, redirigir directamente al logout de Auth0
-        console.log(
-          " AuthContext: Plataforma web, redirigiendo a Auth0 logout"
-        );
         window.location.href = logoutUrl;
       } else {
-        // En mobile, usar WebBrowser
-        console.log("📱 AuthContext: Plataforma mobile, usando WebBrowser");
         await WebBrowser.openAuthSessionAsync(logoutUrl, redirectUri);
       }
-
-      // 2. Limpiar sesión local
-      console.log("uthContext: Limpiando sesión local...");
-      await storage.removeItem("accessToken");
+    } catch (err) {
+      // ignore
+    } finally {
+      await storage.removeItem(ACCESS_TOKEN_KEY);
       await storage.removeItem("user");
+      await storage.removeItem("completeUser");
 
       setAccessToken(null);
       setUser(null);
-      console.log("AuthContext: Estado actualizado (user=null, token=null)");
-
-      console.log("AuthContext: Sesión cerrada completamente");
-    } catch (error) {
-      console.log("AuthContext: Error en logout:", error);
-      // Asegurar limpieza local aunque falle Auth0
-      await storage.removeItem("accessToken");
-      await storage.removeItem("user");
-      setAccessToken(null);
-      setUser(null);
+      setCompleteUser(null);
+      setUserId(null);
+      setAuthError(null);
     }
   };
 
   const value: AuthContextType = {
     user,
+    completeUser,
     accessToken,
     isSignedIn: !!user,
     loading,
+    authError,
     login,
     logout,
   };
@@ -232,7 +338,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// ===== HOOK PERSONALIZADO =====
+// Hook consumidor
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context)

@@ -1,74 +1,28 @@
 import React from "react";
-import { View, StyleSheet, Pressable, Alert, Platform } from "react-native";
+import { View, StyleSheet, Pressable } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/Themed";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
 
 interface TopAppBarProps {
   title: string;
   onNotificationPress?: () => void;
-  onLogoutPress?: () => void;
   showNotifications?: boolean;
-  showLogout?: boolean;
 }
 
 export default function TopAppBar({
   title,
   onNotificationPress,
-  onLogoutPress,
   showNotifications = true,
-  showLogout = true,
 }: TopAppBarProps) {
   const colorScheme = (useColorScheme() ?? "light") as "light" | "dark";
   const colors = Colors[colorScheme];
-
-  const handleLogout = () => {
-    if (Platform.OS === "web") {
-      const confirmed = window.confirm(
-        "¿Estás seguro de que deseas cerrar sesión?"
-      );
-
-      if (confirmed) {
-        if (onLogoutPress) {
-          onLogoutPress();
-        } else {
-          console.log("onLogoutPress no está definido!");
-        }
-      } else {
-        console.log("Logout cancelado");
-      }
-    } else {
-      // En mobile usar Alert nativo
-      Alert.alert(
-        "Cerrar Sesión",
-        "¿Estás seguro de que deseas cerrar sesión?",
-        [
-          {
-            text: "Cancelar",
-            style: "cancel",
-            onPress: () => console.log("Logout cancelado"),
-          },
-          {
-            text: "Cerrar Sesión",
-            style: "destructive",
-            onPress: () => {
-              console.log("✅ Confirmado logout, ejecutando onLogoutPress...");
-              if (onLogoutPress) {
-                onLogoutPress();
-              } else {
-                console.log("onLogoutPress no está definido!");
-              }
-            },
-          },
-        ]
-      );
-    }
-  };
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* Left section - Title */}
       <View style={styles.leftSection}>
         <Text style={styles.title}>{title}</Text>
@@ -77,7 +31,7 @@ export default function TopAppBar({
       {/* Center section - Empty */}
       <View style={styles.centerSection} />
 
-      {/* Right section - Notifications & Logout */}
+      {/* Right section - Notifications */}
       <View style={styles.rightSection}>
         {showNotifications && (
           <Pressable
@@ -85,20 +39,8 @@ export default function TopAppBar({
             style={({ pressed }) => [
               styles.iconButton,
               { opacity: pressed ? 0.7 : 1 },
-            ]}
-          >
+            ]}>
             <FontAwesome name="bell-o" size={24} color={colors.text} />
-          </Pressable>
-        )}
-        {showLogout && (
-          <Pressable
-            onPress={handleLogout}
-            style={({ pressed }) => [
-              styles.iconButton,
-              { opacity: pressed ? 0.7 : 1 },
-            ]}
-          >
-            <Ionicons name="log-out-outline" size={26} color={colors.error} />
           </Pressable>
         )}
       </View>
