@@ -78,7 +78,10 @@ export const Input: React.FC<InputProps> = ({
           multiline={multiline}
           numberOfLines={numberOfLines}
           onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onBlur={() => {
+            setFocused(false);
+            props.onBlur?.();
+          }}
           placeholderTextColor={colors.textTertiary}
         />
       </RNView>
