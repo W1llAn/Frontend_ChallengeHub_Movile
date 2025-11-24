@@ -1,10 +1,9 @@
 import React from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Tabs, router } from "expo-router";
+import { Tabs } from "expo-router";
 
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
-import { useAuth } from "@/contexts/AuthContext";
 import TopAppBar from "@/components/TopAppBar";
 
 /**
@@ -24,16 +23,6 @@ function TabBarIcon(props: {
  */
 export default function TabLayout() {
   const colorScheme = (useColorScheme() ?? "light") as "light" | "dark";
-  const { logout } = useAuth();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.replace("/login");
-    } catch (error) {
-      router.replace("/login");
-    }
-  };
 
   return (
     <Tabs
@@ -53,7 +42,7 @@ export default function TabLayout() {
           fontWeight: "400",
         },
         header: () => (
-          <TopAppBar title="ChallengeHub" onLogoutPress={handleLogout} />
+          <TopAppBar title="ChallengeHub" />
         ),
       }}>
       <Tabs.Screen
