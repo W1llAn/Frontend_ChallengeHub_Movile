@@ -13,7 +13,8 @@ export interface UserResponseDTO {
 }
 
 export interface UserItselfUpdateDTO {
-  username?: string; // Se cambia porque en la edicion del perfil no se debe cambiar el username
+  username?: string;
+  email?: string;
   avatarUrl?: string;
   description: string;
   location: string;
