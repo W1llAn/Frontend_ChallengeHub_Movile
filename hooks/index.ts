@@ -4,3 +4,5 @@
  */
 export { useUsers } from "./useUsers";
 export { useFormValidation, validationRules } from "./useFormValidation";
+export { useCategories } from "./useCategories";
+export { useUserCategories } from "./useUserCategories";
