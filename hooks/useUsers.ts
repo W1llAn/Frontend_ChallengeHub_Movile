@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserById, updateUserById } from "@/services/user.service";
+import { getUserById, updateUserById, findCreatorByUsername } from "@/services/user.service";
 import { showNotifier } from "@/services/notifier";
 import type {
   UserResponseDTO,
@@ -16,12 +16,14 @@ export interface UseUsersReturn {
   currentUser: UserResponseDTO | null;
   loading: boolean;
   updating: boolean;
+  searching: boolean;
   error: string | null;
 
   // Métodos
   fetchCurrentUser: (userId: number) => Promise<void>;
   updateCurrentUser: (dto: UserItselfUpdateDTO) => Promise<boolean>;
   refreshCurrentUser: () => Promise<void>;
+  searchCreator: (username: string) => Promise<UserResponseDTO | null>;
   clearError: () => void;
 }
 
@@ -30,6 +32,7 @@ export const useUsers = (): UseUsersReturn => {
   const [currentUser, setCurrentUser] = useState<UserResponseDTO | null>(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -117,6 +120,30 @@ export const useUsers = (): UseUsersReturn => {
   };
 
   /**
+   * Busca un creador por username
+   */
+  const searchCreator = async (
+    username: string
+  ): Promise<UserResponseDTO | null> => {
+    if (!username.trim()) {
+      return null;
+    }
+
+    try {
+      setSearching(true);
+      setError(null);
+      const creatorData = await findCreatorByUsername(username);
+      return creatorData;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
+      setError(errorMsg);
+      return null;
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  /**
    * Limpia el error
    */
   const clearError = () => {
@@ -127,10 +154,12 @@ export const useUsers = (): UseUsersReturn => {
     currentUser,
     loading,
     updating,
+    searching,
     error,
     fetchCurrentUser,
     updateCurrentUser,
     refreshCurrentUser,
+    searchCreator,
     clearError,
   };
 };
