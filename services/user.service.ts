@@ -87,3 +87,17 @@ export const findUserByUsername = async (
     return null;
   }
 };
+
+/** GET /api/users/creator/{username} */
+export const findCreatorByUsername = async (
+  username: string
+): Promise<UserResponseDTO | null> => {
+  try {
+    const { data } = await api.get<UserResponseDTO[]>(`/users/creator/${username}`);
+    // El endpoint devuelve una lista, tomamos el primer resultado
+    return data.length > 0 ? data[0] : null;
+  } catch (error) {
+    console.error(`Error searching creator by username "${username}":`, error);
+    return null;
+  }
+};
