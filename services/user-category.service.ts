@@ -5,6 +5,7 @@ import type {
   UserCategoryChallenge,
   DeleteUserCategoryParams,
   GetChallengesByCategoryParams,
+  CreatorChallengeCount,
 } from "../types/api/user-category.type";
 
 /**
@@ -58,6 +59,22 @@ export const deleteUserCategory = async (
         categoryId: params.categoryId,
       },
     });
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+/**
+ * Obtiene los creadores ordenados por cantidad de desafíos en una categoría
+ */
+export const getCreatorsByCategoryOrdered = async (
+  categoryId: number
+): Promise<CreatorChallengeCount[]> => {
+  try {
+    const response = await Api.get<CreatorChallengeCount[]>(
+      `/user-categories/creators-by-category/${categoryId}`
+    );
+    return response.data;
   } catch (error: any) {
     throw error;
   }

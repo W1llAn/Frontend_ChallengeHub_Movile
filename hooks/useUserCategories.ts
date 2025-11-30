@@ -3,12 +3,14 @@ import {
   getUserCategories,
   deleteUserCategory,
   getChallengesByUserCategory,
+  getCreatorsByCategoryOrdered,
 } from "@/services/user-category.service";
 import type {
   UserCategory,
   UserCategoryChallenge,
   DeleteUserCategoryParams,
   GetChallengesByCategoryParams,
+  CreatorChallengeCount,
 } from "@/types/api/user-category.type";
 import { showNotifier } from "@/services/notifier";
 
@@ -83,6 +85,25 @@ export const useUserCategories = () => {
     []
   );
 
+  const loadTopCreators = useCallback(
+    async (categoryId: number): Promise<CreatorChallengeCount[]> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getCreatorsByCategoryOrdered(categoryId);
+        return data;
+      } catch (err: any) {
+        const errorMessage = err?.response?.data?.message || "Error al cargar creadores";
+        setError(errorMessage);
+        showNotifier(errorMessage, "error");
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   const refreshCategories = useCallback(
     async (userId: number) => {
       return loadUserCategories(userId);
@@ -97,6 +118,7 @@ export const useUserCategories = () => {
     loadUserCategories,
     removeUserCategory,
     loadChallenges,
+    loadTopCreators,
     refreshCategories,
     setCategories,
   };
