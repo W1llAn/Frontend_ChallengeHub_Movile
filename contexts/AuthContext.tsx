@@ -157,6 +157,14 @@ const extractUserIdFromSub = (sub: string | undefined): number | null => {
   }
 };
 
+// Función para limpiar sesión inconsistente
+const clearInconsistentAuth = async () => {
+  console.log("[Auth] Limpiando sesión inconsistente...");
+  await storage.removeItem(ACCESS_TOKEN_KEY);
+  await storage.removeItem("user");
+  await storage.removeItem("completeUser");
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [completeUser, setCompleteUser] = useState<UserResponseDTO | null>(
@@ -167,7 +175,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
 
-  // Al iniciar, cargar sesión desde storage
+  // Al iniciar, cargar sesión desde storage - VERSIÓN CORREGIDA
   useEffect(() => {
     (async () => {
       try {
@@ -179,15 +187,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log("[Auth] Sesión encontrada en storage -> token (masked):", token ? token.substring(0, 8) + "..." : null);
           console.log("[Auth] user (raw) desde storage:", storedUser);
           console.log("[Auth] completeUser (raw) desde storage:", storedCompleteUser);
+          
           setAccessToken(token);
-          setUser(safeJsonParse(storedUser));
+          const parsedUser = safeJsonParse(storedUser);
+          setUser(parsedUser);
 
+          // ===== SOLUCIÓN SIMPLE: Si no hay completeUser, limpiar sesión inconsistente =====
           if (storedCompleteUser) {
             setCompleteUser(safeJsonParse(storedCompleteUser));
+          } else {
+            console.log("[Auth] Sesión inconsistente - limpiando...");
+            await clearInconsistentAuth();
+            setAccessToken(null);
+            setUser(null);
+            setCompleteUser(null);
           }
         }
       } catch (error) {
-        // ignore
+        console.error("[Auth] Error cargando sesión:", error);
       } finally {
         setLoading(false);
       }
@@ -324,15 +341,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Función simple para limpiar sesión manualmente
+  const clearAuthData = async () => {
+    await clearInconsistentAuth();
+    setAccessToken(null);
+    setUser(null);
+    setCompleteUser(null);
+    setAuthError(null);
+  };
+
   const value: AuthContextType = {
     user,
     completeUser,
     accessToken,
-    isSignedIn: !!user,
+    isSignedIn: !!user && !!completeUser, // Solo considera signedIn si tiene ambos
     loading,
     authError,
     login,
     logout,
+    clearAuthData, // Función para limpiar manualmente
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
