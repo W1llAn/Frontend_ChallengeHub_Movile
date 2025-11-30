@@ -29,3 +29,9 @@ export interface GetChallengesByCategoryParams {
   userId: number;
   categoryId: number;
 }
+
+export interface CreatorChallengeCount {
+  userId: number;
+  username: string;
+  challengeCount: number;
+}
