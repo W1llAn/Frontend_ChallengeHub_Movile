@@ -315,6 +315,7 @@ export default function ExploreScreen() {
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [refreshing, setRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [isCategorySectionExpanded, setIsCategorySectionExpanded] = useState(true);
 
   // Load categories on mount
   useEffect(() => {
@@ -347,6 +348,8 @@ export default function ExploreScreen() {
       setCurrentPage(0);
       resetChallenges();
       await loadChallengesByCategory(category.id, 0, 10);
+      // Collapse category section after selection
+      setIsCategorySectionExpanded(false);
     },
     [loadChallengesByCategory, resetChallenges]
   );
@@ -403,45 +406,99 @@ export default function ExploreScreen() {
         </Text>
       </View>
 
-      {/* Category Search */}
-      <CategorySearchBar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        colors={colors}
-      />
-
-      {/* Categories Horizontal List */}
-      <View style={{ backgroundColor: "transparent" }}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Categorías</Text>
-        {categoriesLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
+      {/* Selected Category Banner (when collapsed) */}
+      {!isCategorySectionExpanded && selectedCategory && (
+        <TouchableOpacity
+          style={[
+            styles.selectedCategoryBanner,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            },
+            Shadows.small,
+          ]}
+          onPress={() => setIsCategorySectionExpanded(true)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.selectedCategoryContent, { backgroundColor: "transparent" }]}>
+            <View
+              style={[
+                styles.selectedCategoryIcon,
+                { backgroundColor: colors.primary + "15" },
+              ]}
+            >
+              <Ionicons
+                name={getCategoryIcon(selectedCategory.name) as any}
+                size={24}
+                color={colors.primary}
+              />
+            </View>
+            <View style={{ flex: 1, backgroundColor: "transparent" }}>
+              <Text style={[styles.selectedCategoryLabel, { color: colors.textTertiary }]}>
+                Categoría seleccionada
+              </Text>
+              <Text style={[styles.selectedCategoryName, { color: colors.text }]}>
+                {selectedCategory.name}
+              </Text>
+            </View>
+            <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
           </View>
-        ) : (
-          <FlatList
-            horizontal
-            data={filteredCategories}
-            keyExtractor={(item) => item.id.toString()}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesList}
-            renderItem={({ item }) => (
-              <CategoryCard
-                category={item}
-                isSelected={selectedCategory?.id === item.id}
-                onPress={() => handleCategorySelect(item)}
-                colors={colors}
+        </TouchableOpacity>
+      )}
+
+      {/* Collapsible Category Section */}
+      {isCategorySectionExpanded && (
+        <>
+          {/* Category Section Header */}
+          <TouchableOpacity
+            style={[styles.categorySectionHeader, { backgroundColor: "transparent" }]}
+            onPress={() => setIsCategorySectionExpanded(false)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Categorías</Text>
+            <Ionicons name="chevron-up" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          {/* Category Search */}
+          <CategorySearchBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            colors={colors}
+          />
+
+          {/* Categories Horizontal List */}
+          <View style={{ backgroundColor: "transparent" }}>
+            {categoriesLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            ) : (
+              <FlatList
+                horizontal
+                data={filteredCategories}
+                keyExtractor={(item) => item.id.toString()}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoriesList}
+                renderItem={({ item }) => (
+                  <CategoryCard
+                    category={item}
+                    isSelected={selectedCategory?.id === item.id}
+                    onPress={() => handleCategorySelect(item)}
+                    colors={colors}
+                  />
+                )}
+                ListEmptyComponent={
+                  <View style={styles.emptyContainer}>
+                    <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                      No se encontraron categorías
+                    </Text>
+                  </View>
+                }
               />
             )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                  No se encontraron categorías
-                </Text>
-              </View>
-            }
-          />
-        )}
-      </View>
+          </View>
+        </>
+      )}
 
       {/* Challenges Section */}
       {selectedCategory && (
@@ -535,8 +592,46 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
+    flex: 1,
+  },
+  categorySectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  selectedCategoryBanner: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  selectedCategoryContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  selectedCategoryIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  selectedCategoryLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  selectedCategoryName: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginTop: 2,
   },
   categoriesList: {
     paddingHorizontal: Spacing.lg,
