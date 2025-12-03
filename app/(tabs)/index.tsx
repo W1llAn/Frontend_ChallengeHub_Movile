@@ -205,9 +205,19 @@ export default function HomeScreen() {
               data={activeChallenges}
               keyExtractor={(item) => item.id.toString()}
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.challengesList}
+              contentContainerStyle={[
+                styles.challengesList,
+                activeChallenges.length === 1 && styles.challengesListCentered,
+              ]}
+              snapToInterval={activeChallenges.length === 1 ? undefined : CARD_WIDTH * 0.85 + Spacing.sm}
+              decelerationRate="fast"
               renderItem={({ item }) => (
-                <ChallengeCard challenge={item} colors={colors} colorScheme={colorScheme} />
+                <ChallengeCard 
+                  challenge={item} 
+                  colors={colors} 
+                  colorScheme={colorScheme}
+                  isSingle={activeChallenges.length === 1}
+                />
               )}
             />
           </View>
@@ -388,15 +398,17 @@ interface ChallengeCardProps {
   challenge: Challenge;
   colors: typeof Colors.light;
   colorScheme: "light" | "dark";
+  isSingle?: boolean;
 }
 
-function ChallengeCard({ challenge, colors, colorScheme }: ChallengeCardProps) {
+function ChallengeCard({ challenge, colors, colorScheme, isSingle = false }: ChallengeCardProps) {
   const progress = challenge.progress || 0;
 
   return (
     <View
       style={[
         styles.challengeCard,
+        isSingle && styles.challengeCardSingle,
         {
           backgroundColor: colors.surface,
           borderColor: colors.border,
@@ -754,12 +766,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     gap: Spacing.md,
   },
+  challengesListCentered: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
   challengeCard: {
     width: CARD_WIDTH * 0.85,
     padding: Spacing.md,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
     marginRight: Spacing.sm,
+  },
+  challengeCardSingle: {
+    width: CARD_WIDTH * 0.95,
+    marginRight: 0,
   },
   challengeHeader: {
     flexDirection: "row",
