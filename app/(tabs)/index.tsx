@@ -19,7 +19,9 @@ import Colors, { BorderRadius, Shadows, Spacing } from "@/constants/Colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserCategories } from "@/hooks/useUserCategories";
 import { useUserChallenges } from "@/hooks/useUserChallenges";
+import { useCategories } from "@/hooks/useCategories";
 import type { Challenge } from "@/types/api/challenge.type";
+import type { Category } from "@/types/api/category.type";
 import type { UserCategory, CreatorChallengeCount } from "@/types/api/user-category.type";
 import { getCategoryIcon } from "@/services/category-icons.service";
 
@@ -34,12 +36,13 @@ export default function HomeScreen() {
   const colors = Colors[colorScheme];
   const { completeUser } = useAuth();
   const { 
-    categories, 
+    categories: userCategories, 
     loading: categoriesLoading, 
     loadUserCategories,
     loadTopCreators 
   } = useUserCategories();
   const { challenges, loading: challengesLoading } = useUserChallenges();
+  const { categories: allCategories, loading: allCategoriesLoading, loadAllCategories } = useCategories();
   
   const [refreshing, setRefreshing] = useState(false);
   const [topCreators, setTopCreators] = useState<CreatorChallengeCount[]>([]);
@@ -51,6 +54,7 @@ export default function HomeScreen() {
     if (completeUser?.id) {
       loadUserCategories(completeUser.id);
     }
+    loadAllCategories();
     
     // Animación de entrada
     Animated.parallel([
@@ -70,10 +74,10 @@ export default function HomeScreen() {
   // Cargar top creators de la primera categoría
   useEffect(() => {
     const fetchTopCreators = async () => {
-      if (categories.length > 0) {
+      if (userCategories.length > 0) {
         setLoadingCreators(true);
         try {
-          const creators = await loadTopCreators(categories[0].categoryId);
+          const creators = await loadTopCreators(userCategories[0].categoryId);
           setTopCreators(creators.slice(0, 3)); // Solo top 3
         } catch (error) {
           setTopCreators([]);
@@ -83,12 +87,13 @@ export default function HomeScreen() {
       }
     };
     fetchTopCreators();
-  }, [categories]);
+  }, [userCategories]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
       if (completeUser?.id) {
+        await loadAllCategories();
         await loadUserCategories(completeUser.id);
       }
     } finally {
@@ -245,13 +250,13 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Categories Section */}
+        {/* User Interests Section - Horizontal Scroll */}
         <View style={[styles.sectionHeader, { backgroundColor: "transparent" }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Tus Intereses
+            Mis Intereses
           </Text>
           <Text style={[styles.sectionCount, { color: colors.textTertiary }]}>
-            {categories.length}
+            {userCategories.length}
           </Text>
         </View>
         
@@ -259,17 +264,21 @@ export default function HomeScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
-        ) : categories.length > 0 ? (
-          <View style={[styles.categoriesGrid, { backgroundColor: "transparent" }]}>
-            {categories.slice(0, 6).map((category) => (
-              <CategoryCardCompact
-                key={category.id}
-                category={category}
+        ) : userCategories.length > 0 ? (
+          <FlatList
+            horizontal
+            data={userCategories}
+            keyExtractor={(item) => item.id.toString()}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.interestsList}
+            renderItem={({ item }) => (
+              <UserCategoryCard
+                category={item}
                 colors={colors}
                 colorScheme={colorScheme}
               />
-            ))}
-          </View>
+            )}
+          />
         ) : (
           <View style={[styles.emptyState, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Ionicons name="grid-outline" size={48} color={colors.textTertiary} />
@@ -279,6 +288,33 @@ export default function HomeScreen() {
             <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
               Ve a la pestaña de Intereses para agregar categorías
             </Text>
+          </View>
+        )}
+
+        {/* All Categories Section - Grid */}
+        <View style={[styles.sectionHeader, { backgroundColor: "transparent" }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Todas las Categorías
+          </Text>
+          <Text style={[styles.sectionCount, { color: colors.textTertiary }]}>
+            {allCategories.length}
+          </Text>
+        </View>
+        
+        {allCategoriesLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <View style={[styles.categoriesGrid, { backgroundColor: "transparent" }]}>
+            {allCategories.map((category) => (
+              <AllCategoryCard
+                key={category.id}
+                category={category}
+                colors={colors}
+                colorScheme={colorScheme}
+              />
+            ))}
           </View>
         )}
       </Animated.View>
@@ -497,14 +533,14 @@ function CreatorCard({ creator, rank, colors, colorScheme }: CreatorCardProps) {
   );
 }
 
-// Category Card Compact Component (reusing interests style)
-interface CategoryCardCompactProps {
+// User Category Card Component - Horizontal Scroll
+interface UserCategoryCardProps {
   category: UserCategory;
   colors: typeof Colors.light;
   colorScheme: "light" | "dark";
 }
 
-function CategoryCardCompact({ category, colors, colorScheme }: CategoryCardCompactProps) {
+function UserCategoryCard({ category, colors, colorScheme }: UserCategoryCardProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -525,7 +561,7 @@ function CategoryCardCompact({ category, colors, colorScheme }: CategoryCardComp
     <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
       <Animated.View
         style={[
-          styles.categoryCardCompact,
+          styles.userCategoryCard,
           {
             backgroundColor: colors.surface,
             borderColor: colors.border,
@@ -536,22 +572,90 @@ function CategoryCardCompact({ category, colors, colorScheme }: CategoryCardComp
       >
         <View
           style={[
-            styles.categoryIconContainerCompact,
+            styles.userCategoryIcon,
             { backgroundColor: colors.primary + "15" },
           ]}
         >
           <Ionicons
             name={getCategoryIcon(category.categoryName) as any}
+            size={28}
+            color={colors.primary}
+          />
+        </View>
+        <Text
+          style={[styles.userCategoryName, { color: colors.text }]}
+          numberOfLines={1}
+        >
+          {category.categoryName}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+// All Category Card Component - Grid
+interface AllCategoryCardProps {
+  category: Category;
+  colors: typeof Colors.light;
+  colorScheme: "light" | "dark";
+}
+
+function AllCategoryCard({ category, colors, colorScheme }: AllCategoryCardProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.96,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
+      <Animated.View
+        style={[
+          styles.allCategoryCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            transform: [{ scale: scaleAnim }],
+          },
+          Shadows.small,
+        ]}
+      >
+        <View
+          style={[
+            styles.allCategoryIcon,
+            { backgroundColor: colors.primary + "15" },
+          ]}
+        >
+          <Ionicons
+            name={getCategoryIcon(category.name) as any}
             size={24}
             color={colors.primary}
           />
         </View>
         <Text
-          style={[styles.categoryNameCompact, { color: colors.text }]}
+          style={[styles.allCategoryName, { color: colors.text }]}
           numberOfLines={1}
         >
-          {category.categoryName}
+          {category.name}
         </Text>
+        {category.description && (
+          <Text
+            style={[styles.allCategoryDescription, { color: colors.textSecondary }]}
+            numberOfLines={2}
+          >
+            {category.description}
+          </Text>
+        )}
       </Animated.View>
     </Pressable>
   );
@@ -767,6 +871,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
   },
+  interestsList: {
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.md,
+    paddingBottom: Spacing.sm,
+  },
+  userCategoryCard: {
+    width: 120,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    alignItems: "center",
+    marginRight: Spacing.sm,
+  },
+  userCategoryIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.sm,
+  },
+  userCategoryName: {
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+  },
   categoriesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -774,14 +904,15 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingBottom: Spacing.xl,
   },
-  categoryCardCompact: {
-    width: (width - Spacing.lg * 2 - Spacing.sm * 2) / 3,
+  allCategoryCard: {
+    width: (width - Spacing.lg * 2 - Spacing.sm * 2) / 2,
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     alignItems: "center",
+    minHeight: 100,
   },
-  categoryIconContainerCompact: {
+  allCategoryIcon: {
     width: 48,
     height: 48,
     borderRadius: BorderRadius.md,
@@ -789,10 +920,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: Spacing.xs,
   },
-  categoryNameCompact: {
-    fontSize: 11,
-    fontWeight: "600",
+  allCategoryName: {
+    fontSize: 12,
+    fontWeight: "700",
     textAlign: "center",
+    marginBottom: 4,
+  },
+  allCategoryDescription: {
+    fontSize: 10,
+    textAlign: "center",
+    lineHeight: 14,
   },
   loadingContainer: {
     paddingVertical: Spacing.xxl,
