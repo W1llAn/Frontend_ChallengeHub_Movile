@@ -347,9 +347,11 @@ export default function ExploreScreen() {
       setSelectedCategory(category);
       setCurrentPage(0);
       resetChallenges();
-      await loadChallengesByCategory(category.id, 0, 10);
-      // Collapse category section after selection
-      setIsCategorySectionExpanded(false);
+      const result = await loadChallengesByCategory(category.id, 0, 10);
+      // Only collapse category section if challenges were found
+      if (result && result.content && result.content.length > 0) {
+        setIsCategorySectionExpanded(false);
+      }
     },
     [loadChallengesByCategory, resetChallenges]
   );
