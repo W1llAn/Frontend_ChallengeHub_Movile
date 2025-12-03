@@ -22,15 +22,16 @@ import type { Category } from "@/types/api/category.type";
 import type { Challenge } from "@/types/api/challenge.type";
 import { getCategoryIcon } from "@/services/category-icons.service";
 import { ChallengeCard } from "@/components/UI/ChallengeCard";
+import { searchChallengesByTitle } from "@/services/challenge.service";
 
 const { width } = Dimensions.get("window");
 
 type SortOption = "recent" | "oldest";
 
 /**
- * Category Search Bar Component - Memoized to prevent unnecessary re-renders
+ * Challenge Search Bar Component - Memoized to prevent unnecessary re-renders
  */
-const CategorySearchBar = memo(({ 
+const ChallengeSearchBar = memo(({ 
   searchQuery, 
   onSearchChange, 
   colors 
@@ -54,7 +55,7 @@ const CategorySearchBar = memo(({
       />
       <TextInput
         style={[styles.searchInput, { color: colors.text }]}
-        placeholder="Buscar categorías..."
+        placeholder="Buscar retos por título..."
         placeholderTextColor={colors.textSecondary}
         value={searchQuery}
         onChangeText={onSearchChange}
@@ -68,7 +69,7 @@ const CategorySearchBar = memo(({
   );
 });
 
-CategorySearchBar.displayName = "CategorySearchBar";
+ChallengeSearchBar.displayName = "ChallengeSearchBar";
 
 /**
  * Category Card Component for horizontal list
@@ -221,6 +222,8 @@ export default function ExploreScreen() {
   } = useChallenges();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Challenge[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [refreshing, setRefreshing] = useState(false);
@@ -232,24 +235,51 @@ export default function ExploreScreen() {
     loadAllCategories();
   }, []);
 
-  // Filter categories based on search
-  const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return categories;
-    return categories.filter((cat) =>
-      cat.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
-    );
-  }, [categories, searchQuery]);
+  // Debounced search for challenges
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.trim().length >= 2) {
+        setSearchLoading(true);
+        try {
+          const results = await searchChallengesByTitle(searchQuery.trim());
+          setSearchResults(results);
+          
+          // Auto-select category if there are results
+          if (results.length > 0) {
+            const firstResultCategoryId = results[0].categoryId;
+            const matchingCategory = categories.find(cat => cat.id === firstResultCategoryId);
+            if (matchingCategory) {
+              setSelectedCategory(matchingCategory);
+            }
+          }
+        } catch (error) {
+          console.error("Error searching challenges:", error);
+          setSearchResults([]);
+        } finally {
+          setSearchLoading(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 500); // 500ms debounce
 
-  // Sort challenges
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, categories]);
+
+  // Show all categories (no filtering during search)
+  const filteredCategories = categories;
+
+  // Sort challenges (either from category or search results)
   const sortedChallenges = useMemo(() => {
-    const sorted = [...challenges];
+    const source = searchQuery.trim().length >= 2 ? searchResults : challenges;
+    const sorted = [...source];
     sorted.sort((a, b) => {
       const dateA = new Date(a.startDate).getTime();
       const dateB = new Date(b.startDate).getTime();
       return sortBy === "recent" ? dateB - dateA : dateA - dateB;
     });
     return sorted;
-  }, [challenges, sortBy]);
+  }, [challenges, searchResults, searchQuery, sortBy]);
 
   // Handle category selection
   const handleCategorySelect = useCallback(
@@ -314,7 +344,7 @@ export default function ExploreScreen() {
       <View style={[styles.header, { backgroundColor: "transparent" }]}>
         <Text style={[styles.title, { color: colors.text }]}>Explorar Retos</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Descubre retos por categoría
+          Busca retos por título o explora por categoría
         </Text>
       </View>
 
@@ -358,7 +388,7 @@ export default function ExploreScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Collapsible Category Section */}
+      {/* Category Section - Always visible, collapsible */}
       {isCategorySectionExpanded && (
         <>
           {/* Category Section Header */}
@@ -371,8 +401,8 @@ export default function ExploreScreen() {
             <Ionicons name="chevron-up" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          {/* Category Search */}
-          <CategorySearchBar
+          {/* Challenge Search */}
+          <ChallengeSearchBar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             colors={colors}
@@ -412,11 +442,20 @@ export default function ExploreScreen() {
         </>
       )}
 
-      {/* Challenges Section */}
-      {selectedCategory && (
+      {/* Challenges Section - Show when category selected OR searching */}
+      {(selectedCategory || searchQuery.trim().length >= 2) && (
         <>
           {/* Sort Control */}
           <SortControl sortBy={sortBy} onSortChange={setSortBy} colors={colors} />
+
+          {/* Search Results Header */}
+          {searchQuery.trim().length >= 2 && !selectedCategory && (
+            <View style={[styles.searchResultsHeader, { backgroundColor: "transparent" }]}>
+              <Text style={[styles.searchResultsText, { color: colors.textSecondary }]}>
+                {searchLoading ? "Buscando..." : `${sortedChallenges.length} resultado${sortedChallenges.length !== 1 ? 's' : ''} encontrado${sortedChallenges.length !== 1 ? 's' : ''}`}
+              </Text>
+            </View>
+          )}
 
           {/* Challenges List */}
           <FlatList
@@ -425,15 +464,17 @@ export default function ExploreScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.challengesList}
             renderItem={({ item }) => <ChallengeCard challenge={item} colors={colors} />}
-            onEndReached={handleLoadMore}
+            onEndReached={selectedCategory && !searchQuery.trim() ? handleLoadMore : undefined}
             onEndReachedThreshold={0.5}
-            ListFooterComponent={renderFooter}
+            ListFooterComponent={searchLoading || challengesLoading ? renderFooter : null}
             ListEmptyComponent={
-              !challengesLoading ? (
+              !searchLoading && !challengesLoading ? (
                 <View style={styles.emptyContainer}>
                   <Ionicons name="search-outline" size={64} color={colors.textTertiary} />
                   <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                    No hay retos en esta categoría
+                    {searchQuery.trim().length >= 2 
+                      ? "No se encontraron retos con ese título" 
+                      : "No hay retos en esta categoría"}
                   </Text>
                 </View>
               ) : null
@@ -449,15 +490,15 @@ export default function ExploreScreen() {
         </>
       )}
 
-      {/* Empty State - No Category Selected */}
-      {!selectedCategory && !categoriesLoading && (
+      {/* Empty State - No Category Selected and Not Searching */}
+      {!selectedCategory && searchQuery.trim().length < 2 && !categoriesLoading && (
         <View style={styles.emptyStateContainer}>
           <Ionicons name="compass-outline" size={80} color={colors.textTertiary} />
           <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-            Selecciona una categoría
+            Selecciona una categoría o busca un reto
           </Text>
           <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-            Elige una categoría para ver los retos disponibles
+            Elige una categoría para ver los retos disponibles o busca por título
           </Text>
         </View>
       )}
@@ -597,6 +638,15 @@ const styles = StyleSheet.create({
   },
   sortButtonText: {
     fontSize: 12,
+    fontWeight: "600",
+  },
+  searchResultsHeader: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  searchResultsText: {
+    fontSize: 13,
     fontWeight: "600",
   },
   challengesList: {
