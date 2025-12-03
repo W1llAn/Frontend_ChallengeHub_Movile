@@ -59,13 +59,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <TabBarIcon name="trophy" color={color} />,
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="explore"
         options={{
           title: "Explorar",
           tabBarIcon: ({ color }) => <TabBarIcon name="compass" color={color} />,
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="creators"
         options={{
