@@ -60,3 +60,22 @@ export const getAllChallenges = async (
         throw error;
     }
 };
+
+/**
+ * Busca challenges por título
+ * GET /api/challenges/search/title
+ * @param title - Título o parte del título a buscar
+ */
+export const searchChallengesByTitle = async (
+    title: string
+): Promise<Challenge[]> => {
+    try {
+        const { data } = await api.get<Challenge[]>("/challenges/search/title", {
+            params: { title }
+        });
+        return data;
+    } catch (error) {
+        throw error;
+    }
+};
+
