@@ -765,6 +765,7 @@ const styles = StyleSheet.create({
   challengesList: {
     paddingHorizontal: Spacing.lg,
     gap: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   challengesListCentered: {
     flexGrow: 1,
@@ -846,6 +847,7 @@ const styles = StyleSheet.create({
   creatorsList: {
     paddingHorizontal: Spacing.lg,
     gap: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   creatorCard: {
     width: 130,
