@@ -18,6 +18,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { useState, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { getCategoryIcon } from '@/services/category-icons.service';
+import { ChallengeCard } from '@/components/UI/ChallengeCard';
 
 export default function MyChallengesScreen() {
   const { challenges, loading, error } = useUserChallenges();
@@ -223,229 +224,7 @@ export default function MyChallengesScreen() {
     );
   };
 
-  // Renderizar modal de detalles
-  const renderDetailModal = () => {
-    if (!selectedChallenge) return null;
-
-    const challenge = selectedChallenge;
-    const categoryIcon = getCategoryIcon(challenge.categoryName);
-    const daysRemaining = getDaysRemaining(challenge.endDate);
-    const isActive = challenge.status === 'ACTIVE';
-    const isCompleted = challenge.status === 'COMPLETED';
-    const startDate = new Date(challenge.startDate);
-    const endDate = new Date(challenge.endDate);
-    const durationDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-
-    return (
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={closeChallengeDetails}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            {/* Header del modal */}
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                Detalles del Reto
-              </Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={closeChallengeDetails}
-              >
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              style={styles.modalScroll}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Imagen del reto */}
-              <View style={styles.modalImageContainer}>
-                {challenge.imageUrl ? (
-                  <Image
-                    source={{ uri: challenge.imageUrl }}
-                    style={styles.modalImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.modalImagePlaceholder, { backgroundColor: colors.primary + '20' }]}>
-                    <Ionicons
-                      name={getCategoryIcon(challenge.categoryName) as any}
-                      size={64}
-                      color={colors.primary}
-                    />
-                  </View>
-                )}
-
-                {/* Overlay de categoría */}
-                <View style={[styles.modalCategoryBadge]}>
-                  <Ionicons
-                    name={getCategoryIcon(challenge.categoryName) as any}
-                    size={14}
-                    color={colors.text}
-                  />
-                  <Text style={[styles.modalCategoryText, { color: colors.text }]}>
-                    {challenge.categoryName}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Información principal */}
-              <View style={styles.modalSection}>
-                <Text style={[styles.modalChallengeTitle, { color: colors.text }]}>
-                  {challenge.title}
-                </Text>
-
-                <View style={[
-                  styles.modalStatusBadge,
-                  {
-                    backgroundColor: isActive ? '#22c55e15' :
-                      isCompleted ? '#3b82f615' :
-                        '#6b728015'
-                  }
-                ]}>
-                  <Text style={[
-                    styles.modalStatusText,
-                    {
-                      color: isActive ? '#22c55e' :
-                        isCompleted ? '#3b82f6' :
-                          colors.textSecondary
-                    }
-                  ]}>
-                    {isActive ? '🟢 Activo' :
-                      isCompleted ? '🔵 Completado' :
-                        '⚫ Inactivo'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Descripción */}
-              <View style={styles.modalSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  Descripción
-                </Text>
-                <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
-                  {challenge.description}
-                </Text>
-              </View>
-
-              {/* Objetivo */}
-              {challenge.objective && (
-                <View style={styles.modalSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                    🎯 Objetivo
-                  </Text>
-                  <Text style={[styles.modalObjective, { color: colors.textSecondary }]}>
-                    {challenge.objective}
-                  </Text>
-                </View>
-              )}
-
-              {/* Información de tiempo */}
-              <View style={styles.modalSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  📅 Duración
-                </Text>
-                <View style={styles.timeInfo}>
-                  <View style={styles.timeItem}>
-                    <Text style={[styles.timeLabel, { color: colors.textTertiary }]}>
-                      Inicio
-                    </Text>
-                    <Text style={[styles.timeValue, { color: colors.text }]}>
-                      {startDate.toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </Text>
-                  </View>
-
-                  <View style={styles.timeItem}>
-                    <Text style={[styles.timeLabel, { color: colors.textTertiary }]}>
-                      Fin
-                    </Text>
-                    <Text style={[styles.timeValue, { color: colors.text }]}>
-                      {endDate.toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </Text>
-                  </View>
-
-                  <View style={styles.timeItem}>
-                    <Text style={[styles.timeLabel, { color: colors.textTertiary }]}>
-                      Duración
-                    </Text>
-                    <Text style={[styles.timeValue, { color: colors.text }]}>
-                      {durationDays} días
-                    </Text>
-                  </View>
-
-                  {isActive && (
-                    <View style={styles.timeItem}>
-                      <Text style={[styles.timeLabel, { color: colors.textTertiary }]}>
-                        Días restantes
-                      </Text>
-                      <Text style={[styles.daysRemainingLarge, { color: colors.primary }]}>
-                        {daysRemaining}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-
-              {/* Información del creador */}
-              <View style={styles.modalSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  👤 Creador
-                </Text>
-                <View style={styles.creatorInfo}>
-                  <View style={[styles.creatorAvatar, { backgroundColor: colors.primary + '20' }]}>
-                    <Text style={[styles.creatorInitials, { color: colors.primary }]}>
-                      {challenge.creatorUsername?.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                  <Text style={[styles.creatorName, { color: colors.text }]}>
-                    {challenge.creatorUsername}
-                  </Text>
-                </View>
-              </View>
-            </ScrollView>
-
-            {/* Botones de acción */}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.secondaryButton, { borderColor: colors.border }]}
-                onPress={closeChallengeDetails}
-              >
-                <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-                  Cerrar
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  {
-                    backgroundColor: isCompleted ? colors.textTertiary : colors.primary,
-                    opacity: isCompleted ? 0.6 : 1
-                  }
-                ]}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {isCompleted ? 'Ver Progreso' : 'Continuar Reto'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
+ 
 
   const styles = StyleSheet.create({
     container: {
@@ -841,7 +620,14 @@ export default function MyChallengesScreen() {
           item.id ? item.id.toString() :
             item.challenge?.id?.toString() ?? index.toString()
         }
-        renderItem={({ item }) => <ChallengeCard challenge={item} />}
+        renderItem={({ item }) => (
+          <ChallengeCard 
+            challenge={item} 
+            colors={colors} 
+            onPress={openChallengeDetails}
+            showSwipeToDelete={true}
+          />
+        )}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -857,8 +643,7 @@ export default function MyChallengesScreen() {
         }}
       />
 
-      {/* Modal de detalles */}
-      {renderDetailModal()}
+    
     </View>
   );
 }
