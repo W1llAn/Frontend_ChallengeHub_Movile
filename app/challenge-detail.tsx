@@ -23,6 +23,8 @@ import { ChallengeStatus } from '@/types/api/challenge.type';
 import { useReactions } from '@/hooks/useReactions';
 import { useComments } from '@/hooks/useComments';
 import { useUserChallenge } from '@/hooks/useUserChallenge';
+import { ReportModal } from '@/components/UI';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +33,7 @@ export default function ChallengeDetailScreen() {
   const router = useRouter();
   const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const colors = Colors[colorScheme];
+  const { completeUser } = useAuth();
 
   // Parse challenge data from params
   const challenge = params.challenge ? JSON.parse(params.challenge as string) : null;
@@ -41,6 +44,7 @@ export default function ChallengeDetailScreen() {
   const [editingText, setEditingText] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
 
   // Use reactions hook
   const {
@@ -319,7 +323,7 @@ export default function ChallengeDetailScreen() {
                   style={styles.menuItem}
                   onPress={() => {
                     setMenuVisible(false);
-                    Alert.alert('Reportar', 'Funcionalidad próximamente');
+                    setReportModalVisible(true);
                   }}
                   activeOpacity={0.7}
                 >
@@ -600,6 +604,18 @@ export default function ChallengeDetailScreen() {
         
       </ScrollView>
     </KeyboardAvoidingView>
+
+    {/* Report Modal */}
+    {completeUser && (
+      <ReportModal
+        visible={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        objectType="CHALLENGE"
+        objectId={challenge.id}
+        reporterId={completeUser.id}
+        objectName={challenge.name}
+      />
+    )}
     </>
   );
 }
