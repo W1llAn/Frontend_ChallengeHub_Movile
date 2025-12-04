@@ -43,9 +43,6 @@ export const useReactions = (challengeId?: number) => {
                 getReactionsByChallenge(challengeId),
             ]);
 
-            console.log('Available reactions:', availableReactions);
-            console.log('Challenge reactions:', challengeReactions);
-
             setReactions(availableReactions);
 
             // Calculate reaction counts
