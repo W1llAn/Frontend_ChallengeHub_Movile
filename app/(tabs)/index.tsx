@@ -22,7 +22,8 @@ import type { Category } from "@/types/api/category.type";
 import type { Challenge } from "@/types/api/challenge.type";
 import { getCategoryIcon } from "@/services/category-icons.service";
 import { ChallengeCard } from "@/components/UI/ChallengeCard";
-import { searchChallengesByTitle } from "@/services/challenge.service";
+import { searchChallengesByTitle } from "@/services/challenge.service"
+import { transformAvatarUrl } from "@/utils/image-url.util";
 
 const { width } = Dimensions.get("window");
 

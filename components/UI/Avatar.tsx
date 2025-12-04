@@ -13,6 +13,7 @@ import {
 import { Text } from "../Themed";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "../useColorScheme";
+import { transformAvatarUrl } from "@/utils/image-url.util";
 
 interface AvatarProps {
   source?: string | null;
@@ -29,6 +30,9 @@ export const Avatar: React.FC<AvatarProps> = ({
   style,
   onPress,
 }) => {
+  // Transformar la URL para reemplazar localhost por la IP de la máquina
+  const transformedSource = transformAvatarUrl(source);
+  
   const colorScheme = (useColorScheme() ?? "light") as "light" | "dark";
   const colors = Colors[colorScheme];
 
@@ -70,8 +74,8 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   return (
     <Container style={[styles.avatar, style]} onPress={onPress}>
-      {source ? (
-        <Image source={{ uri: source }} style={styles.image} />
+      {transformedSource ? (
+        <Image source={{ uri: transformedSource }} style={styles.image} />
       ) : (
         <Text style={styles.initials}>{initials.substring(0, 2)}</Text>
       )}
