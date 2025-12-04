@@ -22,6 +22,7 @@ import { getCategoryIcon } from '@/services/category-icons.service';
 import { ChallengeStatus } from '@/types/api/challenge.type';
 import { useReactions } from '@/hooks/useReactions';
 import { useComments } from '@/hooks/useComments';
+import { useUserChallenge } from '@/hooks/useUserChallenge';
 
 const { width } = Dimensions.get('window');
 
@@ -39,6 +40,7 @@ export default function ChallengeDetailScreen() {
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingText, setEditingText] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   // Use reactions hook
   const {
@@ -60,6 +62,16 @@ export default function ChallengeDetailScreen() {
     canDeleteComment,
     refreshComments,
   } = useComments(challenge?.id);
+
+  // Use user challenge hook
+  const {
+    isSubscribed,
+    loading: loadingSubscription,
+    subscribing,
+    subscribe,
+    unsubscribe,
+    checkSubscription,
+  } = useUserChallenge(challenge?.id);
 
   const handlePostComment = async () => {
     if (commentText.trim()) {
@@ -136,12 +148,46 @@ export default function ChallengeDetailScreen() {
       await Promise.all([
         refreshReactions?.(),
         refreshComments(),
+        checkSubscription(),
       ]);
     } catch (error) {
       console.error('Error refreshing:', error);
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const handleSubscribe = async () => {
+    try {
+      await subscribe();
+      setMenuVisible(false);
+      Alert.alert('Éxito', '¡Te has suscrito al reto!');
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo suscribir al reto');
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    Alert.alert(
+      'Cancelar Suscripcion',
+      '¿Estás seguro de que deseas Cancelar la Suscripcion de este reto?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Cancelar Suscripcion',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await unsubscribe();
+              setMenuVisible(false);
+              Alert.alert('Éxito', 'Has cancelado la Suscripcion del reto!');
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo cancelar la Suscripcion del reto');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (!challenge) {
@@ -216,8 +262,8 @@ export default function ChallengeDetailScreen() {
             </View>
           )}
           
-          {/* Category Badge Overlay */}
-          <View style={styles.categoryBadgeOverlay}>
+          {/* Category Badge Overlay - Left */}
+          <RNView style={styles.categoryBadgeOverlay}>
             <View style={[styles.categoryBadge, { backgroundColor: colors.surface }]}>
               <Ionicons
                 name={getCategoryIcon(challenge.categoryName) as any}
@@ -228,7 +274,61 @@ export default function ChallengeDetailScreen() {
                 {challenge.categoryName}
               </Text>
             </View>
-          </View>
+          </RNView>
+
+          {/* Menu Button Overlay - Right */}
+          <RNView style={styles.menuButtonOverlay}>
+            <TouchableOpacity
+              style={[styles.menuButton, { backgroundColor: colors.surface }]}
+              onPress={() => setMenuVisible(!menuVisible)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color={colors.text} />
+            </TouchableOpacity>
+
+            {/* Dropdown menu */}
+            {menuVisible && (
+              <View style={[styles.dropdownMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                {!isSubscribed ? (
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={handleSubscribe}
+                    disabled={subscribing}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                    <Text style={[styles.menuItemText, { color: colors.text }]}>
+                      {subscribing ? 'Suscribiendo...' : 'Suscribirse al reto'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={handleUnsubscribe}
+                    disabled={subscribing}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="remove-circle-outline" size={20} color="#EF4444" />
+                    <Text style={[styles.menuItemText, { color: colors.text }]}>
+                      {subscribing ? 'Procesando...' : 'Cancelar Suscripcion'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    Alert.alert('Reportar', 'Funcionalidad próximamente');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="flag-outline" size={20} color="#F59E0B" />
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>Reportar reto</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </RNView>
         </View>
         {/* Reactions Bar - Facebook Style */}
           <View style={[styles.reactionsBar, { backgroundColor: 'transparent', borderBottomColor: colors.border }]}>
@@ -335,14 +435,16 @@ export default function ChallengeDetailScreen() {
             </View>
           </View>
 
-          {/* Progress Button */}
-          <TouchableOpacity
-            style={[styles.progressButton, { backgroundColor: colors.primary }]}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
-            <Text style={styles.progressButtonText}>Registrar Avance</Text>
-          </TouchableOpacity>
+          {/* Progress Button - Only show if subscribed */}
+          {isSubscribed && (
+            <TouchableOpacity
+              style={[styles.progressButton, { backgroundColor: colors.primary }]}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.progressButtonText}>Registrar Avance</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Divider */}
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -551,6 +653,11 @@ const styles = StyleSheet.create({
     top: Spacing.md,
     left: Spacing.md,
   },
+  menuButtonOverlay: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.md,
+  },
   categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -573,6 +680,60 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  menuButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: Spacing.xs,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 45,
+    right: 0,
+    minWidth: 200,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    paddingVertical: Spacing.xs,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  menuItemText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  menuDivider: {
+    height: 1,
+    marginVertical: Spacing.xs,
   },
   contentContainer: {
     paddingHorizontal: Spacing.lg,
