@@ -14,7 +14,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors, { BorderRadius, Shadows, Spacing } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -165,11 +165,26 @@ export default function ChallengeDetailScreen() {
   const statusConfig = getStatusConfig();
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <KeyboardAvoidingView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+      {/* Custom Header */}
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          style={styles.headerBackButton}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Detalle del Reto</Text>
+        <View style={styles.headerRight} />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -483,12 +498,33 @@ export default function ChallengeDetailScreen() {
         
       </ScrollView>
     </KeyboardAvoidingView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    marginTop: Spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Platform.OS === 'ios' ? 50 : Spacing.md,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  headerBackButton: {
+    padding: Spacing.xs,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  headerRight: {
+    width: 40,
   },
   scrollView: {
     flex: 1,
