@@ -13,6 +13,7 @@ import { useEffect } from "react";
 import { useColorScheme } from "@/components/useColorScheme";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import LoadingScreen from "@/components/LoadingScreen";
 import { StatusBar } from "expo-status-bar";
 export {
@@ -52,7 +53,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <RootLayoutNav />
+        <NotificationsProvider>
+          <RootLayoutNav />
+        </NotificationsProvider>
       </AuthProvider>
     </ThemeProvider>
   );
