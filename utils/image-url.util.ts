@@ -60,3 +60,49 @@ export const transformAvatarUrl = (avatarUrl: string | null | undefined): string
 export const transformChallengeImageUrl = (imageUrl: string | null | undefined): string | null => {
   return transformImageUrl(imageUrl);
 };
+
+/**
+ * Transforma una URL de documento/archivo para avances de retos
+ * Reemplaza localhost por la IP de la máquina para acceder a archivos desde dispositivos móviles
+ * 
+ * @param documentUrl - URL del documento/archivo que puede contener localhost
+ * @returns URL transformada lista para usar
+ * 
+ * @example
+ * // PDF de avance: http://localhost:9000/challenge-hub/progress-doc.pdf
+ * // Transformada: http://10.79.12.254:9000/challenge-hub/progress-doc.pdf
+ */
+export const transformDocumentUrl = (documentUrl: string | null | undefined): string | null => {
+  return transformImageUrl(documentUrl);
+};
+
+/**
+ * Transforma un array de URLs (útil para múltiples documentos/imágenes)
+ * 
+ * @param urls - Array de URLs que pueden contener localhost
+ * @returns Array de URLs transformadas
+ * 
+ * @example
+ * const urls = ['http://localhost:9000/file1.pdf', 'http://localhost:9000/file2.jpg'];
+ * const transformed = transformUrlArray(urls);
+ * // ['http://10.79.12.254:9000/file1.pdf', 'http://10.79.12.254:9000/file2.jpg']
+ */
+export const transformUrlArray = (urls: (string | null | undefined)[]): (string | null)[] => {
+  return urls.map(url => transformImageUrl(url));
+};
+
+/**
+ * Transforma cualquier URL genérica (imágenes, documentos, videos, etc.)
+ * Función genérica que puede usarse para cualquier tipo de recurso
+ * 
+ * @param url - URL del recurso que puede contener localhost
+ * @returns URL transformada lista para usar
+ * 
+ * @example
+ * transformUrl('http://localhost:9000/challenge-hub/video.mp4')
+ * transformUrl('http://localhost:9000/challenge-hub/document.pdf')
+ * transformUrl('http://localhost:9000/challenge-hub/image.png')
+ */
+export const transformUrl = (url: string | null | undefined): string | null => {
+  return transformImageUrl(url);
+};
