@@ -178,37 +178,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     (async () => {
       try {
+        console.log('[AuthContext] 🔄 Loading session from storage...');
         const token = await storage.getItem(ACCESS_TOKEN_KEY);
         const storedUser = await storage.getItem("user");
         const storedCompleteUser = await storage.getItem("completeUser");
+
+        console.log('[AuthContext] 📦 Storage data:', {
+          hasToken: !!token,
+          hasStoredUser: !!storedUser,
+          hasStoredCompleteUser: !!storedCompleteUser
+        });
 
         if (token && storedUser) {
           
           setAccessToken(token);
           const parsedUser = safeJsonParse(storedUser);
+          console.log('[AuthContext] 👤 Parsed user:', parsedUser);
           setUser(parsedUser);
           // ===== SOLUCIÓN SIMPLE: Si no hay completeUser, limpiar sesión inconsistente =====
 
           if (storedCompleteUser) {
             const parsedCompleteUser = safeJsonParse(storedCompleteUser);
+            console.log('[AuthContext] 👤 Parsed completeUser:', parsedCompleteUser);
             
             if (parsedCompleteUser) {
               const transformedAvatarUrl = transformAvatarUrl(parsedCompleteUser.avatarUrl);
               parsedCompleteUser.avatarUrl = transformedAvatarUrl || parsedCompleteUser.avatarUrl;
+              console.log('[AuthContext] ✅ Setting completeUser with id:', parsedCompleteUser.id);
             }
             
             setCompleteUser(parsedCompleteUser);
           } else {
+            console.warn('[AuthContext] ⚠️ No completeUser in storage, clearing session');
             await clearInconsistentAuth();
             setAccessToken(null);
             setUser(null);
             setCompleteUser(null);
           }
+        } else {
+          console.log('[AuthContext] ⚠️ No valid session found');
         }
       } catch (error) {
-        console.error("[Auth] Error cargando sesión:", error);
+        console.error("[Auth] ❌ Error cargando sesión:", error);
       } finally {
         setLoading(false);
+        console.log('[AuthContext] ✅ Session loading complete');
       }
     })();
   }, []);
@@ -262,13 +276,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(userInfo);
 
           const extractedUserId = extractUserIdFromSub(userInfo.sub);
+          console.log('[AuthContext] 🔑 Extracted userId from sub:', extractedUserId);
           if (extractedUserId) {
             setUserId(extractedUserId);
           }
 
           try {
             if (extractedUserId) {
+              console.log('[AuthContext] 🔍 Fetching backend user with id:', extractedUserId);
               const backendUser = await getUserById(extractedUserId);
+              console.log('[AuthContext] 📦 Backend user received:', backendUser);
               if (backendUser) {
                 const transformedAvatarUrl = transformAvatarUrl(backendUser.avatarUrl);
                 
@@ -277,16 +294,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   avatarUrl: transformedAvatarUrl || backendUser.avatarUrl,
                 };
                 
+                console.log('[AuthContext] ✅ Setting completeUser:', userWithTransformedAvatar);
                 setCompleteUser(userWithTransformedAvatar);
                 try {
                   await storage.setItem("completeUser", JSON.stringify(userWithTransformedAvatar));
+                  console.log('[AuthContext] 💾 CompleteUser saved to storage');
                 } catch (storeErr) {
                   console.warn("[Auth] No se pudo guardar completeUser en storage:", storeErr);
                 }
+              } else {
+                console.warn('[AuthContext] ⚠️ Backend user not found');
               }
             }
           } catch (err) {
-            // Error silencioso en producción
+            console.error('[AuthContext] ❌ Error fetching backend user:', err);
           }
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err);

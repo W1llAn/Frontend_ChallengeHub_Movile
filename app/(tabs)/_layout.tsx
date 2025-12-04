@@ -19,7 +19,7 @@ function TabBarIcon(props: {
 
 /**
  * TabLayout - Main navigation structure for ChallengeHub
- * Implements 6 tabs: Inicio, Mis Retos, Explorar, Creadores, Mis Intereses, Perfil
+ * Implements 5 tabs: Inicio, Mis Retos, Creadores, Mis Intereses, Perfil
  */
 export default function TabLayout() {
   const colorScheme = (useColorScheme() ?? "light") as "light" | "dark";
@@ -59,13 +59,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <TabBarIcon name="trophy" color={color} />,
         }}
       />
-      {/* <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Explorar",
-          tabBarIcon: ({ color }) => <TabBarIcon name="compass" color={color} />,
-        }}
-      /> */}
       <Tabs.Screen
         name="creators"
         options={{

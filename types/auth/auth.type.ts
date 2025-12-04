@@ -19,4 +19,5 @@ export interface AuthContextType {
   authError: string | null;
   login: () => Promise<void>;
   logout: () => Promise<void>;
+  clearAuthData?: () => Promise<void>;
 }
