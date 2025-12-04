@@ -3,4 +3,11 @@
  * Exporta todas las utilidades del proyecto
  */
 
-export { transformImageUrl, transformAvatarUrl, transformChallengeImageUrl } from "./image-url.util";
+export { 
+  transformImageUrl, 
+  transformAvatarUrl, 
+  transformChallengeImageUrl,
+  transformDocumentUrl,
+  transformUrlArray,
+  transformUrl
+} from "./image-url.util";
