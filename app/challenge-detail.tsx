@@ -9,6 +9,9 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  RefreshControl,
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,36 +21,9 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { getCategoryIcon } from '@/services/category-icons.service';
 import { ChallengeStatus } from '@/types/api/challenge.type';
 import { useReactions } from '@/hooks/useReactions';
+import { useComments } from '@/hooks/useComments';
 
 const { width } = Dimensions.get('window');
-
-// Mock data for comments (will be replaced with real data later)
-const MOCK_COMMENTS = [
-  {
-    id: 1,
-    username: 'Ana García',
-    avatar: null,
-    text: '¡Excelente reto! Ya llevo 3 días completados 💪',
-    timestamp: '2h',
-    likes: 5,
-  },
-  {
-    id: 2,
-    username: 'Carlos Ruiz',
-    avatar: null,
-    text: 'Me encanta la idea, voy a empezar mañana',
-    timestamp: '5h',
-    likes: 3,
-  },
-  {
-    id: 3,
-    username: 'María López',
-    avatar: null,
-    text: '¿Alguien tiene tips para mantener la constancia?',
-    timestamp: '1d',
-    likes: 8,
-  },
-];
 
 export default function ChallengeDetailScreen() {
   const params = useLocalSearchParams();
@@ -60,19 +36,111 @@ export default function ChallengeDetailScreen() {
 
   // State
   const [commentText, setCommentText] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Use reactions hook
   const {
     reactionCounts,
     loading: loadingReactions,
     handleReaction,
+    refreshReactions,
   } = useReactions(challenge?.id);
 
-  const handlePostComment = () => {
+  // Use comments hook
+  const {
+    comments,
+    loading: loadingComments,
+    submitting,
+    handleCreateComment,
+    handleUpdateComment,
+    handleDeleteComment,
+    canEditComment,
+    canDeleteComment,
+    refreshComments,
+  } = useComments(challenge?.id);
+
+  const handlePostComment = async () => {
     if (commentText.trim()) {
-      // TODO: Implement comment posting
-      console.log('Posting comment:', commentText);
-      setCommentText('');
+      try {
+        await handleCreateComment(commentText);
+        setCommentText('');
+      } catch (error) {
+        Alert.alert('Error', 'No se pudo publicar el comentario');
+      }
+    }
+  };
+
+  const startEditComment = (commentId: number, currentText: string) => {
+    setEditingCommentId(commentId);
+    setEditingText(currentText);
+  };
+
+  const cancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingText('');
+  };
+
+  const saveEdit = async () => {
+    if (editingCommentId && editingText.trim()) {
+      try {
+        await handleUpdateComment(editingCommentId, editingText);
+        setEditingCommentId(null);
+        setEditingText('');
+      } catch (error) {
+        Alert.alert('Error', 'No se pudo actualizar el comentario');
+      }
+    }
+  };
+
+  const confirmDelete = (commentId: number) => {
+    Alert.alert(
+      'Eliminar comentario',
+      '¿Estás seguro de que deseas eliminar este comentario?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await handleDeleteComment(commentId);
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo eliminar el comentario');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const formatTimestamp = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Ahora';
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${diffHours}h`;
+    if (diffDays < 7) return `${diffDays}d`;
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refreshReactions?.(),
+        refreshComments(),
+      ]);
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -97,24 +165,23 @@ export default function ChallengeDetailScreen() {
   const statusConfig = getStatusConfig();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header with back button */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Detalles del Reto</Text>
-        <View style={styles.headerRight} />
-      </View>
-
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         {/* Challenge Image */}
         <View style={styles.imageContainer}>
@@ -270,7 +337,7 @@ export default function ChallengeDetailScreen() {
           {/* Comments Section */}
           <View style={[styles.commentsSection, { backgroundColor: 'transparent' }]}>
             <Text style={[styles.commentsTitle, { color: colors.text }]}>
-              💭 Comentarios ({MOCK_COMMENTS.length})
+              💭 Comentarios ({comments.length})
             </Text>
 
             {/* Comment Input */}
@@ -282,94 +349,146 @@ export default function ChallengeDetailScreen() {
                 value={commentText}
                 onChangeText={setCommentText}
                 multiline
+                editable={!submitting}
               />
               <TouchableOpacity
                 style={[
                   styles.sendButton,
                   {
-                    backgroundColor: commentText.trim() ? colors.primary : colors.border,
+                    backgroundColor: commentText.trim() && !submitting ? colors.primary : colors.border,
                   },
                 ]}
                 onPress={handlePostComment}
-                disabled={!commentText.trim()}
+                disabled={!commentText.trim() || submitting}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name="send"
-                  size={20}
-                  color={commentText.trim() ? '#FFFFFF' : colors.textTertiary}
-                />
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons
+                    name="send"
+                    size={20}
+                    color={commentText.trim() ? '#FFFFFF' : colors.textTertiary}
+                  />
+                )}
               </TouchableOpacity>
             </View>
 
             {/* Comments List */}
-            <View style={styles.commentsList}>
-              {MOCK_COMMENTS.map((comment) => (
-                <View key={comment.id} style={styles.commentItem}>
-                  <View style={[styles.commentAvatar, { backgroundColor: colors.primary + '20' }]}>
-                    <Text style={[styles.commentAvatarText, { color: colors.primary }]}>
-                      {comment.username.charAt(0)}
-                    </Text>
-                  </View>
-                  <View style={styles.commentContent}>
-                    <View style={styles.commentHeader}>
-                      <Text style={[styles.commentUsername, { color: colors.text }]}>
-                        {comment.username}
-                      </Text>
-                      <Text style={[styles.commentTimestamp, { color: colors.textTertiary }]}>
-                        {comment.timestamp}
+            {loadingComments ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            ) : comments.length === 0 ? (
+              <View style={styles.emptyCommentsContainer}>
+                <Text style={[styles.emptyCommentsText, { color: colors.textSecondary }]}>
+                  No hay comentarios aún. ¡Sé el primero en comentar!
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.commentsList}>
+                {comments.map((comment) => (
+                  <View key={comment.id} style={styles.commentItem}>
+                    <View style={[styles.commentAvatar, { backgroundColor: colors.primary + '20' }]}>
+                      <Text style={[styles.commentAvatarText, { color: colors.primary }]}>
+                        {comment.userName.charAt(0).toUpperCase()}
                       </Text>
                     </View>
-                    <Text style={[styles.commentText, { color: colors.textSecondary }]}>
-                      {comment.text}
-                    </Text>
-                    <View style={styles.commentActions}>
-                      <TouchableOpacity style={styles.commentAction} activeOpacity={0.7}>
-                        <Ionicons name="heart-outline" size={16} color={colors.textTertiary} />
-                        <Text style={[styles.commentActionText, { color: colors.textTertiary }]}>
-                          {comment.likes}
+                    <View style={styles.commentContent}>
+                      <View style={styles.commentHeader}>
+                        <Text style={[styles.commentUsername, { color: colors.text }]}>
+                          {comment.userName}
                         </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.commentAction} activeOpacity={0.7}>
-                        <Ionicons name="chatbubble-outline" size={16} color={colors.textTertiary} />
-                        <Text style={[styles.commentActionText, { color: colors.textTertiary }]}>
-                          Responder
+                        <Text style={[styles.commentTimestamp, { color: colors.textTertiary }]}>
+                          {formatTimestamp(comment.createdAt)}
                         </Text>
-                      </TouchableOpacity>
+                      </View>
+
+                      {/* Editing mode */}
+                      {editingCommentId === comment.id ? (
+                        <View style={styles.editContainer}>
+                          <TextInput
+                            style={[styles.editInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
+                            value={editingText}
+                            onChangeText={setEditingText}
+                            multiline
+                            autoFocus
+                          />
+                          <View style={styles.editActions}>
+                            <TouchableOpacity
+                              style={[styles.editActionButton, { backgroundColor: colors.border }]}
+                              onPress={cancelEdit}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[styles.editActionText, { color: colors.text }]}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.editActionButton, { backgroundColor: colors.primary }]}
+                              onPress={saveEdit}
+                              disabled={!editingText.trim() || submitting}
+                              activeOpacity={0.7}
+                            >
+                              {submitting ? (
+                                <ActivityIndicator size="small" color="#FFFFFF" />
+                              ) : (
+                                <Text style={[styles.editActionText, { color: '#FFFFFF' }]}>Guardar</Text>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={[styles.commentText, { color: colors.textSecondary }]}>
+                            {comment.content}
+                          </Text>
+                          
+                          {/* Actions for own comments */}
+                          {(canEditComment(comment) || canDeleteComment(comment)) && (
+                            <View style={styles.commentActions}>
+                              {canEditComment(comment) && (
+                                <TouchableOpacity
+                                  style={styles.commentAction}
+                                  onPress={() => startEditComment(comment.id, comment.content)}
+                                  activeOpacity={0.7}
+                                >
+                                  <Ionicons name="create-outline" size={16} color={colors.textTertiary} />
+                                  <Text style={[styles.commentActionText, { color: colors.textTertiary }]}>
+                                    Editar
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                              {canDeleteComment(comment) && (
+                                <TouchableOpacity
+                                  style={styles.commentAction}
+                                  onPress={() => confirmDelete(comment.id)}
+                                  activeOpacity={0.7}
+                                >
+                                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                                  <Text style={[styles.commentActionText, { color: '#EF4444' }]}>
+                                    Eliminar
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          )}
+                        </>
+                      )}
                     </View>
                   </View>
-                </View>
-              ))}
+                ))}
+              </View>
+            )}
             </View>
           </View>
-        </View>
+        
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Platform.OS === 'ios' ? 50 : Spacing.md,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.xs,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  headerRight: {
-    width: 40,
   },
   scrollView: {
     flex: 1,
@@ -546,7 +665,7 @@ const styles = StyleSheet.create({
   },
   reactionsRow: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: "2px",
     justifyContent: 'center',
   },
   reactionButton: {
@@ -645,5 +764,46 @@ const styles = StyleSheet.create({
   commentActionText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  loadingContainer: {
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCommentsContainer: {
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCommentsText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  editContainer: {
+    marginTop: Spacing.xs,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+    fontSize: 14,
+    minHeight: 60,
+    marginBottom: Spacing.xs,
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    justifyContent: 'flex-end',
+  },
+  editActionButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  editActionText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
