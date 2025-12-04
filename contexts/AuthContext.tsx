@@ -14,6 +14,7 @@ import { Platform } from "react-native";
 import { AuthContextType, AuthUser } from "../types/auth/auth.type";
 import type { UserResponseDTO } from "../types/api/user.type";
 import { getUserById } from "../services/user.service";
+import { transformAvatarUrl } from "../utils/image-url.util";
 
 // Cierra auth session si es necesario
 WebBrowser.maybeCompleteAuthSession();
@@ -157,9 +158,7 @@ const extractUserIdFromSub = (sub: string | undefined): number | null => {
   }
 };
 
-// Función para limpiar sesión inconsistente
 const clearInconsistentAuth = async () => {
-  console.log("[Auth] Limpiando sesión inconsistente...");
   await storage.removeItem(ACCESS_TOKEN_KEY);
   await storage.removeItem("user");
   await storage.removeItem("completeUser");
@@ -184,19 +183,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const storedCompleteUser = await storage.getItem("completeUser");
 
         if (token && storedUser) {
-          console.log("[Auth] Sesión encontrada en storage -> token (masked):", token ? token.substring(0, 8) + "..." : null);
-          console.log("[Auth] user (raw) desde storage:", storedUser);
-          console.log("[Auth] completeUser (raw) desde storage:", storedCompleteUser);
           
           setAccessToken(token);
           const parsedUser = safeJsonParse(storedUser);
           setUser(parsedUser);
-
           // ===== SOLUCIÓN SIMPLE: Si no hay completeUser, limpiar sesión inconsistente =====
+
           if (storedCompleteUser) {
-            setCompleteUser(safeJsonParse(storedCompleteUser));
+            const parsedCompleteUser = safeJsonParse(storedCompleteUser);
+            
+            if (parsedCompleteUser) {
+              const transformedAvatarUrl = transformAvatarUrl(parsedCompleteUser.avatarUrl);
+              parsedCompleteUser.avatarUrl = transformedAvatarUrl || parsedCompleteUser.avatarUrl;
+            }
+            
+            setCompleteUser(parsedCompleteUser);
           } else {
-            console.log("[Auth] Sesión inconsistente - limpiando...");
             await clearInconsistentAuth();
             setAccessToken(null);
             setUser(null);
@@ -232,8 +234,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!token) return;
 
         try {
-          console.log("[Auth] response.success recibida:", response);
-          console.log("[Auth] token recibido (masked):", token ? token.substring(0, 8) + "..." : null);
 
           let userInfo = decodeToken(token);
 
@@ -251,7 +251,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             userInfo = await userInfoResponse.json();
           }
 
-          // ===== GUARDAR token en storage ANTES de pedir datos al backend =====
           try {
             await storage.setItem(ACCESS_TOKEN_KEY, token);
             await storage.setItem("user", JSON.stringify(userInfo));
@@ -259,39 +258,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.warn("No se pudo guardar token en storage:", storeErr);
           }
 
-          // Actualizar estado local: el interceptor en api leerá el token desde storage.
-          console.log("[Auth] userInfo decodificado:", userInfo);
           setAccessToken(token);
           setUser(userInfo);
 
-          // Guardar el userId para poder usarlo en profile
           const extractedUserId = extractUserIdFromSub(userInfo.sub);
           if (extractedUserId) {
-            console.log("[Auth] userId extraído del sub:", extractedUserId);
             setUserId(extractedUserId);
-          } else {
-            console.warn("[Auth] No se pudo extraer userId del sub:", userInfo.sub);
           }
 
-          // Intentar obtener el perfil completo desde el backend y guardarlo en state/storage
           try {
             if (extractedUserId) {
-              console.log("[Auth] Intentando obtener perfil completo desde backend para id:", extractedUserId);
               const backendUser = await getUserById(extractedUserId);
               if (backendUser) {
-                console.log("[Auth] Perfil completo obtenido desde backend:", backendUser);
-                setCompleteUser(backendUser);
+                const transformedAvatarUrl = transformAvatarUrl(backendUser.avatarUrl);
+                
+                const userWithTransformedAvatar = {
+                  ...backendUser,
+                  avatarUrl: transformedAvatarUrl || backendUser.avatarUrl,
+                };
+                
+                setCompleteUser(userWithTransformedAvatar);
                 try {
-                  await storage.setItem("completeUser", JSON.stringify(backendUser));
+                  await storage.setItem("completeUser", JSON.stringify(userWithTransformedAvatar));
                 } catch (storeErr) {
                   console.warn("[Auth] No se pudo guardar completeUser en storage:", storeErr);
                 }
-              } else {
-                console.warn("[Auth] Backend no devolvió perfil para id:", extractedUserId);
               }
             }
           } catch (err) {
-            console.error("[Auth] Error al obtener perfil completo desde backend:", err);
+            // Error silencioso en producción
           }
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err);
@@ -354,12 +349,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     completeUser,
     accessToken,
-    isSignedIn: !!user && !!completeUser, // Solo considera signedIn si tiene ambos
+    isSignedIn: !!user && !!completeUser,
     loading,
     authError,
     login,
     logout,
-    clearAuthData, // Función para limpiar manualmente
+    clearAuthData,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -13,6 +13,8 @@ import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
 import { Ionicons } from "@expo/vector-icons";
 import type { UserResponseDTO } from "@/types/api/user.type";
+import { transformAvatarUrl } from "@/utils/image-url.util";
+import { Image } from "react-native";
 
 interface CreatorProfileProps {
   visible: boolean;
@@ -123,15 +125,19 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
                   },
                 ]}
               >
-                {creator.avatarUrl ? (
-                  <Text style={[styles.avatarText, { color: colors.primary }]}>
-                    {creator.username.charAt(0).toUpperCase()}
-                  </Text>
-                ) : (
-                  <Text style={[styles.avatarText, { color: colors.primary }]}>
-                    {creator.username.charAt(0).toUpperCase()}
-                  </Text>
-                )}
+                {(() => {
+                  const transformedUrl = transformAvatarUrl(creator.avatarUrl);
+                  return transformedUrl ? (
+                    <Image
+                      source={{ uri: transformedUrl }}
+                      style={styles.avatar}
+                    />
+                  ) : (
+                    <Text style={[styles.avatarText, { color: colors.primary }]}>
+                      {creator.username.charAt(0).toUpperCase()}
+                    </Text>
+                  );
+                })()}
               </RNView>
             </RNView>
 

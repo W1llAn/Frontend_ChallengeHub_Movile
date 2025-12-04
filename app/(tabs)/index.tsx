@@ -24,6 +24,7 @@ import type { Challenge } from "@/types/api/challenge.type";
 import type { Category } from "@/types/api/category.type";
 import type { UserCategory, CreatorChallengeCount } from "@/types/api/user-category.type";
 import { getCategoryIcon } from "@/services/category-icons.service";
+import { transformAvatarUrl } from "@/utils/image-url.util";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - Spacing.lg * 2;
@@ -143,14 +144,17 @@ export default function HomeScreen() {
           </View>
           
           <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
-            {completeUser?.avatarUrl ? (
-              <Image
-                source={{ uri: completeUser.avatarUrl }}
-                style={styles.avatar}
-              />
-            ) : (
-              <Ionicons name="person" size={28} color={colors.textInverse} />
-            )}
+            {(() => {
+              const transformedUrl = transformAvatarUrl(completeUser?.avatarUrl);
+              return transformedUrl ? (
+                <Image
+                  source={{ uri: transformedUrl }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <Ionicons name="person" size={28} color={colors.textInverse} />
+              );
+            })()}
           </View>
         </View>
 
