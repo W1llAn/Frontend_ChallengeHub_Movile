@@ -14,6 +14,7 @@ import Colors from '@/constants/Colors';
 import { getCategoryIcon } from '@/services/category-icons.service';
 import type { Challenge } from '@/types/api/challenge.type';
 import { ChallengeStatus } from '@/types/api/challenge.type';
+import { useRouter } from 'expo-router';
 
 interface ChallengeCardProps {
   challenge: Challenge | { challenge: Challenge };
@@ -30,6 +31,8 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
   onDelete,
   showSwipeToDelete = false,
 }) => {
+  const router = useRouter();
+  
   // Handle both direct challenge and nested challenge object
   const challenge = 'challenge' in challengeProp ? challengeProp.challenge : challengeProp;
   
@@ -52,6 +55,18 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
       day: 'numeric',
       month: 'short'
     });
+  };
+
+  const handleCardPress = () => {
+    if (onPress) {
+      onPress(challenge);
+    } else {
+      // Default navigation to detail screen
+      router.push({
+        pathname: '/challenge-detail',
+        params: { challenge: JSON.stringify(challenge) }
+      });
+    }
   };
 
   const daysRemaining = getDaysRemaining(challenge.endDate);
@@ -250,7 +265,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
       >
         {/* TouchableOpacity that covers the entire card including the image */}
         <TouchableOpacity
-          onPress={() => onPress?.(challenge)}
+          onPress={handleCardPress}
           activeOpacity={0.7}
           style={styles.fullCardTouchable}
         >

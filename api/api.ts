@@ -24,7 +24,8 @@ const getTokenFromStorage = async (): Promise<string | null> => {
 const maskToken = (token: string | null | undefined) => {
   if (!token) return null;
   if (token.length <= 20) return token;
-  return `${token.substring(0, 8)}...${token.substring(token.length - 6)}`;
+  //return `${token.substring(0, 8)}...${token.substring(token.length - 6)}`;
+  return token;
 };
 
 const extractErrorMessage = (error: AxiosError<any>) => {
@@ -35,9 +36,9 @@ const extractErrorMessage = (error: AxiosError<any>) => {
       typeof data.errors[0] === "string"
         ? data.errors.join(", ")
         : data.errors
-            .map((e: any) => e?.defaultMessage ?? e?.message ?? "")
-            .filter(Boolean)
-            .join(", ");
+          .map((e: any) => e?.defaultMessage ?? e?.message ?? "")
+          .filter(Boolean)
+          .join(", ");
 
     return `${data.message}: ${list}`;
   }
