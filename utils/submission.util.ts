@@ -161,3 +161,70 @@ export const getRelativeTime = (dateString: string): string => {
   if (diffDays < 30) return `hace ${Math.floor(diffDays / 7)}s`;
   return `hace ${Math.floor(diffDays / 30)}mes`;
 };
+
+/**
+ * Valida que la fecha seleccionada sea válida según la frecuencia del reto
+ * @param selectedDate Fecha seleccionada por el usuario
+ * @param frequency Tipo de frecuencia del reto (DAILY, WEEKLY, etc)
+ * @returns Objeto con validación: { valid: boolean, error?: string }
+ */
+export const validateDateByFrequency = (
+  selectedDate: Date,
+  frequency?: string
+): { valid: boolean; error?: string } => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const selected = new Date(selectedDate);
+  selected.setHours(0, 0, 0, 0);
+
+  // Validar que no sea en el futuro
+  if (selected > today) {
+    return { valid: false, error: 'No puedes registrar avances para fechas futuras' };
+  }
+
+  // Si no hay frecuencia especificada, solo validar que no sea futura
+  if (!frequency) {
+    return { valid: true };
+  }
+
+  const daysDiff = Math.floor((today.getTime() - selected.getTime()) / 86400000);
+
+  switch (frequency) {
+    case 'DAILY':
+      // Solo puede ser hoy o ayer máximo (día anterior)
+      if (daysDiff > 1) {
+        return { valid: false, error: 'Para retos diarios, solo puedes registrar avances del día actual o anterior' };
+      }
+      break;
+
+    case 'WEEKLY':
+      // Debe estar en la semana actual (últimos 7 días)
+      if (daysDiff > 7) {
+        return { valid: false, error: 'Para retos semanales, solo puedes registrar avances de esta semana' };
+      }
+      break;
+
+    case 'BIWEEKLY':
+      // Debe estar en las últimas 2 semanas (14 días)
+      if (daysDiff > 14) {
+        return { valid: false, error: 'Para retos quincenales, solo puedes registrar avances de las últimas 2 semanas' };
+      }
+      break;
+
+    case 'MONTHLY':
+      // Debe estar en el mes actual
+      if (selected.getMonth() !== today.getMonth() || selected.getFullYear() !== today.getFullYear()) {
+        return { valid: false, error: 'Para retos mensuales, solo puedes registrar avances del mes actual' };
+      }
+      break;
+
+    case 'CUSTOM':
+      // Sin restricciones adicionales
+      break;
+
+    default:
+      return { valid: true };
+  }
+
+  return { valid: true };
+};
