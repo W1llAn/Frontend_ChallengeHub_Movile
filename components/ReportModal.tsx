@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   View as RNView,
   Dimensions,
+  Keyboard,
 } from "react-native";
 import { Text, View } from "@/components/Themed";
 import Colors from "@/constants/Colors";
@@ -68,6 +69,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       setErrors({});
       setShowSuccessModal(false);
       clearError();
+    } else {
+      // Cuando el modal se cierra, forzar el cierre del teclado
+      Keyboard.dismiss();
     }
   }, [visible]);
 
@@ -107,13 +111,18 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     });
 
     if (success) {
-      // Mostrar modal de éxito
-      setShowSuccessModal(true);
-      // Cerrar ambos modales después de 3 segundos
+      // Cerrar teclado inmediatamente
+      Keyboard.dismiss();
+      // Cerrar el modal del formulario primero
+      onClose();
+      // Pequeño delay para evitar conflictos visuales
       setTimeout(() => {
-        setShowSuccessModal(false);
-        onClose();
-      }, 3000);
+        setShowSuccessModal(true);
+        // Cerrar modal de éxito después de 3 segundos
+        setTimeout(() => {
+          setShowSuccessModal(false);
+        }, 3000);
+      }, 100);
     }
   };
 
@@ -131,23 +140,25 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   return (
+    <>
     <Modal
       visible={visible}
       transparent
       animationType="slide"
       onRequestClose={onClose}
     >
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
+      <View style={styles.overlay}>
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={onClose}
+        />
         <KeyboardAvoidingView
-          style={styles.avoidingView}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardView}
+          keyboardVerticalOffset={0}
         >
-          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-            <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
               {/* Header */}
               <RNView style={[styles.header, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>
@@ -254,9 +265,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 />
               </RNView>
             </View>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
-      </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
 
       {/* Success Modal */}
       <Modal
@@ -284,7 +295,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           </View>
         </View>
       </Modal>
-    </Modal>
+    </>
   );
 };
 
@@ -294,8 +305,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "flex-end",
   },
-  avoidingView: {
+  backdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  keyboardView: {
     justifyContent: "flex-end",
+    maxHeight: SCREEN_HEIGHT * 0.85,
   },
   modalContainer: {
     width: "100%",
