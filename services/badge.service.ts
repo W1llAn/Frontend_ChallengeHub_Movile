@@ -11,7 +11,7 @@ import { BadgesDifficulty, BadgeWithUserCountDTO } from "../types/api/userBadge.
 export const BadgeService = {
   /** Obtener todas las insignias paginadas */
   listPaged: async (page = 0, size = 10) => {
-    const { data } = await api.get(`/api/badges`, {
+    const { data } = await api.get(`/badges`, {
       params: { page, size },
     });
     return data; // Page<BadgeResponseDTO>
@@ -19,13 +19,13 @@ export const BadgeService = {
 
   /** Obtener insignia por ID */
   getById: async (id: number): Promise<BadgeResponseDTO> => {
-    const { data } = await api.get(`/api/badges/${id}`);
+    const { data } = await api.get(`/badges/${id}`);
     return data;
   },
 
   /** Crear insignia */
   create: async (payload: BadgeCreateDTO): Promise<BadgeResponseDTO> => {
-    const { data } = await api.post(`/api/badges`, payload);
+    const { data } = await api.post(`/badges`, payload);
     return data;
   },
 
@@ -34,13 +34,13 @@ export const BadgeService = {
     id: number,
     payload: BadgeUpdateDTO
   ): Promise<BadgeResponseDTO> => {
-    const { data } = await api.put(`/api/badges/${id}`, payload);
+    const { data } = await api.put(`/badges/${id}`, payload);
     return data;
   },
 
   /** Eliminar insignia */
   delete: async (id: number): Promise<void> => {
-    await api.delete(`/api/badges/${id}`);
+    await api.delete(`/badges/${id}`);
   },
 
   /** Obtener badges filtrados por dificultad (paginados) */
@@ -50,7 +50,7 @@ export const BadgeService = {
     size = 10
   ) => {
     const { data } = await api.get(
-      `/api/badges/difficulty/${difficulty}`,
+      `/badges/difficulty/${difficulty}`,
       { params: { page, size } }
     );
     return data; // Page<BadgeResponseDTO>
@@ -58,13 +58,13 @@ export const BadgeService = {
 
   /** Obtener badges con conteo de usuarios */
   listWithUserCount: async (): Promise<BadgeWithUserCountDTO[]> => {
-    const { data } = await api.get(`/api/badges/with-user-count`);
+    const { data } = await api.get(`/badges/with-user-count`);
     return data;
   },
 
   /** Conteo de usuarios por badge */
   getUserCountByBadge: async (id: number): Promise<number> => {
-    const { data } = await api.get(`/api/badges/${id}/user-count`);
+    const { data } = await api.get(`/badges/${id}/user-count`);
     return data; // number
   },
 
@@ -73,7 +73,7 @@ export const BadgeService = {
     difficulty: BadgesDifficulty
   ): Promise<BadgeWithUserCountDTO[]> => {
     const { data } = await api.get(
-      `/api/badges/with-user-count?difficulty=${difficulty}`
+      `/badges/with-user-count?difficulty=${difficulty}`
     );
     return data;
   },

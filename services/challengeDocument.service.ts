@@ -18,7 +18,7 @@ export const ChallengeDocumentService = {
     if (notes) form.append("notes", notes);
 
     const { data } = await api.post(
-      `/api/challenges/${challengeId}/documents/upload-pdf`,
+      `/challenges/${challengeId}/documents/upload-pdf`,
       form,
       { headers: { "Content-Type": "multipart/form-data" } }
     );
@@ -30,7 +30,7 @@ export const ChallengeDocumentService = {
     payload: ChallengeDocumentCreateDTO
   ): Promise<ChallengeDocumentResponseDTO> => {
     const { data } = await api.post(
-      `/api/challenges/${challengeId}/documents`,
+      `/challenges/${challengeId}/documents`,
       payload
     );
     return data;
@@ -38,7 +38,7 @@ export const ChallengeDocumentService = {
 
   activate: async (challengeId: number, documentId: number) => {
     const { data } = await api.patch(
-      `/api/challenges/${challengeId}/documents/activate`,
+      `/challenges/${challengeId}/documents/activate`,
       null,
       { params: { documentId } }
     );
@@ -46,25 +46,25 @@ export const ChallengeDocumentService = {
   },
 
   list: async (challengeId: number) => {
-    const { data } = await api.get(`/api/challenges/${challengeId}/documents`);
+    const { data } = await api.get(`/challenges/${challengeId}/documents`);
     return data; // ChallengeDocumentResponseDTO[]
   },
 
   getActive: async (challengeId: number) => {
-    const { data } = await api.get(`/api/challenges/${challengeId}/documents/active`);
+    const { data } = await api.get(`/challenges/${challengeId}/documents/active`);
     return data;
   },
 
   getActiveUrl: async (challengeId: number): Promise<string> => {
     const { data } = await api.get(
-      `/api/challenges/${challengeId}/documents/active-url`
+      `/challenges/${challengeId}/documents/active-url`
     );
     return data.url;
   },
 
   listAllUrls: async (challengeId: number): Promise<string[]> => {
     const { data } = await api.get(
-      `/api/challenges/${challengeId}/documents/urls`
+      `/challenges/${challengeId}/documents/urls`
     );
     return data;
   },
@@ -74,7 +74,7 @@ export const ChallengeDocumentService = {
     documentId: number
   ): Promise<string> => {
     const { data } = await api.get(
-      `/api/challenges/${challengeId}/documents/${documentId}/url`
+      `/challenges/${challengeId}/documents/${documentId}/url`
     );
     return data.url;
   },
@@ -85,13 +85,13 @@ export const ChallengeDocumentService = {
     requesterId: number
   ) => {
     await api.delete(
-      `/api/challenges/${challengeId}/documents/${documentId}`,
+      `/challenges/${challengeId}/documents/${documentId}`,
       { params: { requesterId } }
     );
   },
 
   deleteAll: async (challengeId: number) => {
-    await api.delete(`/api/challenges/${challengeId}/documents`);
+    await api.delete(`/challenges/${challengeId}/documents`);
   },
 
   /**
@@ -99,6 +99,6 @@ export const ChallengeDocumentService = {
    * Elimina todas las versiones de documentos asociados al reto
    */
   deleteAllByChallenge: async (challengeId: number) => {
-    await api.delete(`/api/challenges/${challengeId}/documents`);
+    await api.delete(`/challenges/${challengeId}/documents`);
   },
 };

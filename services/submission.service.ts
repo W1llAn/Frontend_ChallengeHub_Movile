@@ -1,17 +1,22 @@
 import api from "../api/api";
 import {
   SubmissionCreateDTO,
+  SubmissionFileCreateDTO,
+  SubmissionFileResponseDTO,
   SubmissionReviewDTO,
   SubmissionResponseDTO,
 } from "../types/api/submission.type";
 
 export const SubmissionService = {
   /**
-   * Crear envío de avance
+   * PASO 1: Crear submission (envío de avance)
+   * 
    * FLUJO CORRECTO:
    * 1. Usuario sube PDF/imagen con ImageService.uploadPdf() o ImageService.upload()
    * 2. Recibe fileId en la respuesta
-   * 3. Llama a este endpoint pasando el fileId
+   * 3. Llama a create() con userChallengeId y type
+   * 4. Luego llama a addFile() con el submissionId y fileId del paso 1
+   * 
    * El periodKey (fecha de envío) se genera automáticamente como la fecha actual
    * Si el reto requiere revisión manual (requireReview=true), queda PENDING
    * Si no requiere revisión, se auto-aprueba inmediatamente y se asignan puntos
@@ -19,7 +24,35 @@ export const SubmissionService = {
   create: async (
     payload: SubmissionCreateDTO
   ): Promise<SubmissionResponseDTO> => {
-    const { data } = await api.post(`/api/submissions`, payload);
+    console.log('🔧 SubmissionService.create - Payload:', payload);
+    const { data } = await api.post(`/submissions`, payload);
+    console.log('✅ Submission creada:', data);
+    return data;
+  },
+
+  /**
+   * PASO 2: Asociar archivo a submission
+   * 
+   * Después de crear la submission en el paso 1, se debe asociar el archivo
+   * subido previamente con ImageService.uploadPdf() o ImageService.upload()
+   * 
+   * Respuesta: Objeto SubmissionFile con todos los datos del archivo incluida su URL
+   * Nota: Esto activa notificaciones y recalcula progreso si es auto-aprobado
+   */
+  addFile: async (
+    submissionId: number,
+    payload: SubmissionFileCreateDTO
+  ): Promise<SubmissionFileResponseDTO> => {
+    console.log('🔧 SubmissionService.addFile');
+    console.log('   submissionId:', submissionId, '(type:', typeof submissionId, ')');
+    console.log('   payload:', JSON.stringify(payload, null, 2));
+    console.log('   URL destino: POST /submissions/' + submissionId + '/files');
+    
+    const { data } = await api.post(
+      `/submissions/${submissionId}/files`,
+      payload
+    );
+    console.log('✅ Archivo asociado a submission:', JSON.stringify(data, null, 2));
     return data;
   },
 
@@ -34,7 +67,7 @@ export const SubmissionService = {
     reviewerId: number
   ): Promise<SubmissionResponseDTO> => {
     const { data } = await api.patch(
-      `/api/submissions/${submissionId}/review`,
+      `/submissions/${submissionId}/review`,
       payload,
       { params: { reviewerId } }
     );
@@ -47,7 +80,7 @@ export const SubmissionService = {
    */
   listByUserChallenge: async (userChallengeId: number) => {
     const { data } = await api.get(
-      `/api/submissions/by-user-challenge/${userChallengeId}`
+      `/submissions/by-user-challenge/${userChallengeId}`
     );
     return data;
   },
@@ -57,7 +90,7 @@ export const SubmissionService = {
    * Devuelve todos los envíos con estado PENDING (cola de revisión), ordenados por fecha de creación ascendente
    */
   listPending: async () => {
-    const { data } = await api.get(`/api/submissions/pending`);
+    const { data } = await api.get(`/submissions/pending`);
     return data;
   },
 
@@ -67,7 +100,7 @@ export const SubmissionService = {
    */
   listPdfUrlsByUserChallenge: async (userChallengeId: number) => {
     const { data } = await api.get(
-      `/api/submissions/by-user-challenge/${userChallengeId}/pdf-urls`
+      `/submissions/by-user-challenge/${userChallengeId}/pdf-urls`
     );
     return data;
   },
@@ -78,7 +111,7 @@ export const SubmissionService = {
    */
   listPdfUrlsBySubmission: async (submissionId: number) => {
     const { data } = await api.get(
-      `/api/submissions/${submissionId}/pdf-urls`
+      `/submissions/${submissionId}/pdf-urls`
     );
     return data;
   },
@@ -89,7 +122,7 @@ export const SubmissionService = {
    */
   getSinglePdf: async (submissionId: number): Promise<string> => {
     const { data } = await api.get(
-      `/api/submissions/${submissionId}/pdf-url`
+      `/submissions/${submissionId}/pdf-url`
     );
     return data.url;
   },
@@ -100,6 +133,6 @@ export const SubmissionService = {
    * Solo puede eliminarse si es el último envío
    */
   delete: async (submissionId: number): Promise<void> => {
-    await api.delete(`/api/submissions/${submissionId}`);
+    await api.delete(`/submissions/${submissionId}`);
   },
 };

@@ -11,7 +11,7 @@ export const ImageService = {
     const form = new FormData();
     form.append("file", file);
 
-    const { data } = await api.post(`/api/images/upload`, form, {
+    const { data } = await api.post(`/images/upload`, form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
@@ -48,7 +48,7 @@ export const ImageService = {
     const form = new FormData();
     form.append("file", file);
 
-    const { data } = await api.post(`/api/images/upload-pdf`, form, {
+    const { data } = await api.post(`/images/upload-pdf`, form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
