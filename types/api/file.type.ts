@@ -39,3 +39,22 @@ export interface PdfUploadResponseDto {
   objectKey: string;
   suggestion: ChallengeDocumentCreateSuggestion;
 }
+
+export interface ChallengeDocumentCreateDTO {
+  challengeId: number;
+  fileId: number;
+  title?: string;
+  notes?: string;
+  kind: DocumentKind; // default en backend: QUESTIONNAIRE
+}
+
+export interface ChallengeDocumentResponseDTO {
+  id: number;
+  challengeId: number;
+  fileId: number;
+  kind: DocumentKind;
+  isActive: boolean;
+  title: string;
+  notes: string;
+  createdAt: string;
+}
