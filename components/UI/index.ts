@@ -12,3 +12,4 @@ export { InfoRow } from "./InfoRow";
 export { Badge } from "./Badge";
 export { Select } from "./Select";
 export { DatePickerInput } from "./DatePickerInput";
+export { ReportModal } from "../ReportModal";

@@ -15,6 +15,7 @@ import { getCategoryIcon } from '@/services/category-icons.service';
 import type { Challenge } from '@/types/api/challenge.type';
 import { ChallengeStatus } from '@/types/api/challenge.type';
 import { useRouter } from 'expo-router';
+import { transformChallengeImageUrl } from '@/utils/image-url.util';
 
 interface ChallengeCardProps {
   challenge: Challenge | { challenge: Challenge };
@@ -273,7 +274,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
           <View style={styles.imageContainer}>
             {challenge.imageUrl ? (
               <Image
-                source={{ uri: challenge.imageUrl }}
+                source={{ uri: transformChallengeImageUrl(challenge.imageUrl) || '' }}
                 style={styles.challengeImage}
                 resizeMode="cover"
               />
