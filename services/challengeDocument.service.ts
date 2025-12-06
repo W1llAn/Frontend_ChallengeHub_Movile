@@ -93,4 +93,12 @@ export const ChallengeDocumentService = {
   deleteAll: async (challengeId: number) => {
     await api.delete(`/api/challenges/${challengeId}/documents`);
   },
+
+  /**
+   * Alias para deleteAll - Eliminar todos los documentos de un reto
+   * Elimina todas las versiones de documentos asociados al reto
+   */
+  deleteAllByChallenge: async (challengeId: number) => {
+    await api.delete(`/api/challenges/${challengeId}/documents`);
+  },
 };
