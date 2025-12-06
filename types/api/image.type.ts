@@ -7,11 +7,11 @@ export interface ImageResponseDTO {
 }
 
 export interface ImageUploadResponseDto {
+  fileId: number; 
   imageUrl: string;
   originalFileName: string;
   fileSize: number;
   contentType: string;
   message: string;
-  fileId?: string; // ID del archivo en storage (usado para referencias en submissions)
-  objectKey?: string; // Clave del objeto en MinIO/bucket
+  objectKey?: string; 
 }

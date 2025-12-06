@@ -1,13 +1,15 @@
 export type ValidationType = "PHOTO" | "PDF";
 export type SubmissionStatus = "PENDING" | "APPROVED" | "REJECTED";
-export type FileRole = "EVIDENCE";
+export type FileRole = "EVIDENCE" | "SUPPORTING_DOCUMENT";
 
 export interface SubmissionCreateDTO {
   userChallengeId: number;
-  fileId: string | number; // ID del archivo subido (obtenido de ImageService.uploadPdf o upload)
   type: ValidationType;
-  // Nota: periodKey se genera automáticamente en el servidor como la fecha actual (hoy)
-  // No es necesario enviarlo desde el frontend
+}
+
+export interface SubmissionFileCreateDTO {
+  fileId: number;
+  role: FileRole;
 }
 
 export interface SubmissionReviewDTO {
@@ -22,6 +24,17 @@ export interface SubmissionFileResponseDTO {
   role: FileRole;
   createdAt: string;
   file: FileResponseDTO;
+}
+
+export interface FileResponseDTO {
+  id: number;
+  filename: string;
+  bucket: string;
+  objectKey: string;
+  contentType: string;
+  sizeBytes: number;
+  url: string;
+  expiresAt: string;
 }
 
 
@@ -39,10 +52,4 @@ export interface SubmissionResponseDTO {
   files: SubmissionFileResponseDTO[];
 }
 
-export interface FileResponseDTO {
-  id: number;
-  bucket: string;
-  objectKey: string;
-  contentType: string;
-  sizeBytes: number;
-}
+
