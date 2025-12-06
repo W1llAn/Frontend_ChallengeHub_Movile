@@ -43,4 +43,12 @@ export const UserBadgeService = {
     });
     return data; // Page<UserBadgeResponseDTO>
   },
+
+  /** Obtener usuarios que tienen una insignia específica */
+  getUsersByBadge: async (badgeId: number, page = 0, size = 10) => {
+    const { data } = await api.get(`/api/user-badges/badge/${badgeId}`, {
+      params: { page, size },
+    });
+    return data; // Page<UserBadgeResponseDTO>
+  },
 };
