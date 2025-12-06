@@ -67,4 +67,14 @@ export const BadgeService = {
     const { data } = await api.get(`/api/badges/${id}/user-count`);
     return data; // number
   },
+
+  /** Obtener insignias filtrando por dificultad (devuelve con conteo de usuarios) */
+  getBadgesWithUserCountByDifficulty: async (
+    difficulty: BadgesDifficulty
+  ): Promise<BadgeWithUserCountDTO[]> => {
+    const { data } = await api.get(
+      `/api/badges/with-user-count?difficulty=${difficulty}`
+    );
+    return data;
+  },
 };
