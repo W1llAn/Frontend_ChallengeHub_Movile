@@ -4,9 +4,10 @@ export type FileRole = "EVIDENCE";
 
 export interface SubmissionCreateDTO {
   userChallengeId: number;
-  periodKey: string; // LocalDate -> string YYYY-MM-DD
+  fileId: string | number; // ID del archivo subido (obtenido de ImageService.uploadPdf o upload)
   type: ValidationType;
-  fileIds: number[];
+  // Nota: periodKey se genera automáticamente en el servidor como la fecha actual (hoy)
+  // No es necesario enviarlo desde el frontend
 }
 
 export interface SubmissionReviewDTO {
