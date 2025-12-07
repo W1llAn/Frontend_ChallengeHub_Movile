@@ -6,7 +6,13 @@ import {
   BadgeResponseDTO,
 } from "../types/api/badge.type";
 
-import { BadgesDifficulty, BadgeWithUserCountDTO } from "../types/api/userBadge.type";
+import {
+  BadgesDifficulty,
+  BadgeWithUserCountDTO,
+  CreateUserBadgeDTO,
+  UserBadgeResponseDTO,
+  UserBadgesSummaryDTO,
+} from "../types/api/userBadge.type";
 
 export const BadgeService = {
   /** Obtener todas las insignias paginadas */
@@ -76,5 +82,91 @@ export const BadgeService = {
       `/badges/with-user-count?difficulty=${difficulty}`
     );
     return data;
+  },
+
+  // ============== ENDPOINTS DE USER BADGES ==============
+
+  /**
+   * Obtener todas las asignaciones usuario-insignia paginadas
+   * @param page Número de página (0-based)
+   * @param size Tamaño de la página
+   * @returns Página con asignaciones de insignias
+   */
+  listAllUserBadges: async (page = 0, size = 10) => {
+    const { data } = await api.get(`/user-badges`, {
+      params: { page, size },
+    });
+    return data; // Page<UserBadgeResponseDTO>
+  },
+
+  /**
+   * Obtener asignación usuario-insignia por ID
+   * @param id ID de la asignación
+   * @returns Detalles de la asignación
+   */
+  getUserBadgeById: async (id: number): Promise<UserBadgeResponseDTO> => {
+    const { data } = await api.get(`/user-badges/${id}`);
+    return data;
+  },
+
+  /**
+   * Asignar insignia a usuario (requiere rol ADMIN)
+   * @param payload Datos: userId y badgeId
+   * @returns Asignación creada
+   */
+  assignBadgeToUser: async (
+    payload: CreateUserBadgeDTO
+  ): Promise<UserBadgeResponseDTO> => {
+    const { data } = await api.post(`/user-badges`, payload);
+    return data;
+  },
+
+  /**
+   * Remover insignia de usuario (requiere rol ADMIN)
+   * @param userBadgeId ID de la asignación a eliminar
+   */
+  removeBadgeFromUser: async (userBadgeId: number): Promise<void> => {
+    await api.delete(`/user-badges/${userBadgeId}`);
+  },
+
+  /**
+   * Obtener insignias por usuario (paginado)
+   * @param userId ID del usuario
+   * @param page Número de página (0-based)
+   * @param size Tamaño de la página
+   * @returns Página con insignias del usuario
+   */
+  getBadgesByUser: async (userId: number, page = 0, size = 10) => {
+    const { data } = await api.get(`/user-badges/user/${userId}`, {
+      params: { page, size },
+    });
+    return data; // Page<UserBadgeResponseDTO>
+  },
+
+  /**
+   * Obtener resumen de insignias por usuario
+   * Retorna conteo total y lista detallada de insignias
+   * @param userId ID del usuario
+   * @returns Resumen de insignias del usuario
+   */
+  getUserBadgesSummary: async (
+    userId: number
+  ): Promise<UserBadgesSummaryDTO> => {
+    const { data } = await api.get(`/user-badges/user/${userId}/summary`);
+    return data;
+  },
+
+  /**
+   * Obtener usuarios por insignia (paginado)
+   * @param badgeId ID de la insignia
+   * @param page Número de página (0-based)
+   * @param size Tamaño de la página
+   * @returns Página con usuarios que tienen esa insignia
+   */
+  getUsersByBadge: async (badgeId: number, page = 0, size = 10) => {
+    const { data } = await api.get(`/user-badges/badge/${badgeId}`, {
+      params: { page, size },
+    });
+    return data; // Page<UserBadgeResponseDTO>
   },
 };
