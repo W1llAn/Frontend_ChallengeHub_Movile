@@ -30,17 +30,7 @@ export const useSubmissionProgress = (): UseSubmissionProgressReturn => {
       try {
         setLoading(true);
         setError(null);
-        console.log(`📊 Cargando progreso del usuario ${userId} en reto ${challengeId}`);
-        
         const data = await SubmissionService.getPointsByUserAndChallenge(userId, challengeId);
-        
-        console.log('✅ Progreso cargado:', {
-          challengeId: data.challengeId,
-          totalPoints: data.totalPoints,
-          approvedSubmissionsCount: data.approvedSubmissionsCount,
-          progressPercent: data.progressPercent,
-        });
-        
         setUserProgress(data);
       } catch (err: any) {
         const errorMessage = err?.response?.data?.message || err?.message || 'Error al cargar el progreso';
@@ -55,7 +45,6 @@ export const useSubmissionProgress = (): UseSubmissionProgressReturn => {
 
   const refreshProgress = useCallback(
     async (userId: number, challengeId: number) => {
-      console.log('🔄 Actualizando progreso...');
       await loadProgress(userId, challengeId);
     },
     [loadProgress]

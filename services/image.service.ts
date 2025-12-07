@@ -34,10 +34,6 @@ export const ImageService = {
       );
     }
 
-    console.log('🔧 ImageService.upload - Archivo:', file.name || file.filename);
-    console.log('   - Tamaño:', file.size, 'bytes');
-    console.log('   - Tipo MIME:', fileType);
-    
     const form = new FormData();
     form.append("file", file);
 
@@ -45,20 +41,12 @@ export const ImageService = {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    console.log('✅ Imagen subida - Response completa:', JSON.stringify(data, null, 2));
-    console.log('   - fileId:', data.fileId, '(type:', typeof data.fileId, ')');
-    console.log('   - imageUrl:', data.imageUrl);
-    
-    // Validar que fileId sea un número válido
-    if (typeof data.fileId !== 'number') {
-      console.warn('⚠️ ADVERTENCIA: fileId no es un número, intentando parsear:', data.fileId);
-      if (typeof data.fileId === 'string') {
-        data.fileId = parseInt(data.fileId, 10);
-      }
+    if (typeof data.fileId !== 'number' && typeof data.fileId === 'string') {
+      data.fileId = parseInt(data.fileId, 10);
     }
     
     if (!data.fileId && data.fileId !== 0) {
-      throw new Error('El servidor no devolvió un fileId válido. Respuesta: ' + JSON.stringify(data));
+      throw new Error('El servidor no devolvió un fileId válido');
     }
     
     return data;
@@ -93,10 +81,6 @@ export const ImageService = {
       );
     }
 
-    console.log('🔧 ImageService.uploadPdf - Archivo:', file.name || file.filename);
-    console.log('   - Tamaño:', file.size, 'bytes');
-    console.log('   - Tipo MIME:', file.type);
-    
     const form = new FormData();
     form.append("file", file);
 
@@ -104,20 +88,12 @@ export const ImageService = {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    console.log('✅ PDF subido - Response completa:', JSON.stringify(data, null, 2));
-    console.log('   - fileId:', data.fileId, '(type:', typeof data.fileId, ')');
-    console.log('   - imageUrl:', data.imageUrl);
-    
-    // Validar que fileId sea un número válido
-    if (typeof data.fileId !== 'number') {
-      console.warn('⚠️ ADVERTENCIA: fileId no es un número, intentando parsear:', data.fileId);
-      if (typeof data.fileId === 'string') {
-        data.fileId = parseInt(data.fileId, 10);
-      }
+    if (typeof data.fileId !== 'number' && typeof data.fileId === 'string') {
+      data.fileId = parseInt(data.fileId, 10);
     }
     
     if (!data.fileId && data.fileId !== 0) {
-      throw new Error('El servidor no devolvió un fileId válido. Respuesta: ' + JSON.stringify(data));
+      throw new Error('El servidor no devolvió un fileId válido');
     }
     
     return data;

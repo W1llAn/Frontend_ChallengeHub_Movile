@@ -76,41 +76,18 @@ export const useFileUpload = (): UseFileUploadReturn => {
           );
         }
 
-        console.log('');
-        console.log('═══════════════════════════════════════════════');
-        console.log('📤 useFileUpload.uploadFile - Iniciando carga');
-        console.log('═══════════════════════════════════════════════');
-        console.log('   - Nombre:', file.name);
-        console.log('   - Tamaño:', file.size, 'bytes');
-        console.log('   - Tipo MIME:', contentType);
-        console.log('   - Validación:', validationType);
-        console.log('═══════════════════════════════════════════════');
-
         // Simular progreso de carga
         setUploadProgress(30);
 
         // Subir archivo usando el endpoint correcto según el tipo
         let response;
         if (validationType === 'PDF') {
-          // Usar endpoint específico para PDFs
-          console.log('📤 Usando ImageService.uploadPdf()');
           response = await ImageService.uploadPdf(file);
         } else {
-          // Usar endpoint para imágenes
-          console.log('📤 Usando ImageService.upload()');
           response = await ImageService.upload(file);
         }
 
         setUploadProgress(100);
-
-        console.log('');
-        console.log('═══════════════════════════════════════════════');
-        console.log('✅ Archivo subido exitosamente');
-        console.log('═══════════════════════════════════════════════');
-        console.log('   - Response completa:', JSON.stringify(response, null, 2));
-        console.log('   - fileId:', response.fileId, '(type:', typeof response.fileId, ')');
-        console.log('═══════════════════════════════════════════════');
-        console.log('');
 
         // El servidor devuelve directamente fileId (número) en la respuesta
         if (!response.fileId && response.fileId !== 0) {
@@ -119,7 +96,6 @@ export const useFileUpload = (): UseFileUploadReturn => {
 
         // Asegurar que fileId es un número
         if (typeof response.fileId !== 'number') {
-          console.warn('⚠️ fileId no es número, parseando:', response.fileId);
           response.fileId = parseInt(response.fileId, 10);
         }
 
@@ -128,7 +104,6 @@ export const useFileUpload = (): UseFileUploadReturn => {
         return response;
       } catch (err: any) {
         const errorMessage = err?.message || 'Error al subir el archivo';
-        console.error('❌ Error en uploadFile:', errorMessage);
         setError(errorMessage);
         throw err;
       } finally {

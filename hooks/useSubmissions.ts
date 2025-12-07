@@ -70,17 +70,7 @@ export const useSubmissions = (): UseSubmissionsReturn => {
           throw new Error('Datos incompletos: userChallengeId y type son requeridos');
         }
 
-        console.log('📋 ANTES DE createSubmission - Payload a enviar:');
-        console.log(JSON.stringify(payload, null, 2));
-
         const response = await SubmissionService.create(payload);
-        
-        console.log('📥 RESPUESTA DE createSubmission:');
-        console.log(JSON.stringify(response, null, 2));
-        console.log('   - response.id:', response.id, '(type:', typeof response.id, ')');
-        
-        console.log('✅ Submission creado con ID:', response.id);
-        // El submission se agrega a la lista
         setSubmissions(prev => [response, ...prev]);
         
         return response;
@@ -114,19 +104,11 @@ export const useSubmissions = (): UseSubmissionsReturn => {
         setAddingFile(true);
         setError(null);
 
-        console.log('🔍 useSubmissions.addFileToSubmission - Validando...');
-        console.log('   submissionId:', submissionId, '(type:', typeof submissionId, ', valid:', !!submissionId, ')');
-        console.log('   fileId:', payload.fileId, '(type:', typeof payload.fileId, ', valid:', !!payload.fileId, ')');
-        console.log('   role:', payload.role, '(type:', typeof payload.role, ', valid:', !!payload.role, ')');
-
         if (!submissionId || !payload.fileId || !payload.role) {
           throw new Error('Datos incompletos: submissionId, fileId y role son requeridos');
         }
 
-        console.log('✅ Validación pasada, llamando al servicio...');
         const response = await SubmissionService.addFile(submissionId, payload);
-        
-        console.log('✅ Archivo agregado al submission');
         // Actualizar el submission en la lista
         setSubmissions(prev => prev.map(sub => 
           sub.id === submissionId 
@@ -137,7 +119,6 @@ export const useSubmissions = (): UseSubmissionsReturn => {
         return response;
       } catch (err: any) {
         const errorMessage = err?.response?.data?.message || err?.message || 'Error al agregar el archivo';
-        console.error('❌ Error en addFileToSubmission:', errorMessage);
         setError(errorMessage);
         throw err;
       } finally {
@@ -193,7 +174,6 @@ export const useSubmissions = (): UseSubmissionsReturn => {
   const loadSubmissionsByUserChallenge = useCallback(
     async (userChallengeId: number) => {
       if (!userChallengeId) {
-        console.warn('⚠️ loadSubmissionsByUserChallenge - userChallengeId es nulo/vacío');
         setSubmissions([]);
         return;
       }
@@ -201,21 +181,7 @@ export const useSubmissions = (): UseSubmissionsReturn => {
       try {
         setLoading(true);
         setError(null);
-        
-        console.log('');
-        console.log('═══════════════════════════════════════════════');
-        console.log('📤 useSubmissions.loadSubmissionsByUserChallenge');
-        console.log('═══════════════════════════════════════════════');
-        console.log('   - userChallengeId:', userChallengeId);
-        
         const data = await SubmissionService.listByUserChallenge(userChallengeId);
-        
-        console.log('✅ Submissions cargados exitosamente');
-        console.log('   - Total:', data.length);
-        console.log('   - Datos:', JSON.stringify(data, null, 2));
-        console.log('═══════════════════════════════════════════════');
-        console.log('');
-        
         setSubmissions(data);
       } catch (err: any) {
         const errorMessage = err?.response?.data?.message || 'Error al cargar los submissions';

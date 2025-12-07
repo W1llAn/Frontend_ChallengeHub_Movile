@@ -760,9 +760,8 @@ export default function ChallengeDetailScreen() {
           
           // Recargar los submissions en el grid
           if (submissionsGridRef.current?.refresh) {
-            console.log('🔄 Llamando a refresh en SubmissionsGrid...');
             submissionsGridRef.current.refresh().catch((err: any) => {
-              console.error('❌ Error recargando submissions:', err);
+              console.error('Error recargando submissions:', err);
             });
           }
           

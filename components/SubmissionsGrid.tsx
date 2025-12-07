@@ -63,7 +63,6 @@ export const SubmissionsGrid = forwardRef<SubmissionsGridHandle, SubmissionsGrid
     // Exponer función de refresh para que el padre pueda recargar
     useImperativeHandle(ref, () => ({
       refresh: async () => {
-        console.log('🔄 SubmissionsGrid.refresh - Recargando submissions...');
         await loadSubmissionsByUserChallenge(userChallengeId);
       },
     }), [userChallengeId, loadSubmissionsByUserChallenge]);

@@ -119,17 +119,9 @@ export const SubmissionModal = ({
     if (editingSubmission) {
       try {
         const validationType = challenge?.validationType || 'PHOTO';
-        
-        console.log('');
-        console.log('═══════════════════════════════════════════════');
-        console.log('🔄 MODO EDICIÓN: Actualizando archivo');
-        console.log('═══════════════════════════════════════════════');
-        
         // Subir el nuevo archivo
         const uploadResponse = await uploadFile(selectedFile, validationType);
         let fileId = uploadResponse?.fileId;
-
-        console.log('   - fileId recibido:', fileId, '(type:', typeof fileId, ')');
 
         if (!fileId && fileId !== 0) {
           throw new Error('El servidor no devolvió un ID de archivo válido. Respuesta: ' + JSON.stringify(uploadResponse));
@@ -137,15 +129,11 @@ export const SubmissionModal = ({
 
         // Asegurar que fileId es un número
         if (typeof fileId !== 'number') {
-          console.warn('⚠️ fileId no es número, convirtiendo:', fileId);
           fileId = Number(fileId);
           if (isNaN(fileId)) {
             throw new Error('No se pudo convertir fileId a número válido');
           }
         }
-
-        console.log('   - fileId convertido:', fileId, '(type:', typeof fileId, ')');
-        console.log('═══════════════════════════════════════════════');
 
         // Actualizar el submission con el nuevo fileId
         const updatePayload: SubmissionUpdateDTO = {
@@ -197,27 +185,8 @@ export const SubmissionModal = ({
     try {
       // PASO 1: Subir el archivo primero (obtener fileId del servidor)
       const validationType = challenge.validationType || 'PHOTO';
-      
-      console.log('');
-      console.log('═══════════════════════════════════════════════');
-      console.log('📤 PASO 1: Subiendo archivo');
-      console.log('═══════════════════════════════════════════════');
-      console.log('   - Nombre:', selectedFile?.name);
-      console.log('   - Tamaño:', selectedFile?.size, 'bytes');
-      console.log('   - Tipo:', selectedFile?.type || selectedFile?.mimeType);
-      console.log('   - Validación esperada:', validationType);
-      console.log('═══════════════════════════════════════════════');
-      
       const uploadResponse = await uploadFile(selectedFile, validationType);
       let fileId = uploadResponse?.fileId;
-
-      console.log('');
-      console.log('═══════════════════════════════════════════════');
-      console.log('🔍 VALIDANDO fileId');
-      console.log('═══════════════════════════════════════════════');
-      console.log('   - fileId recibido:', fileId, '(type:', typeof fileId, ')');
-      console.log('   - uploadResponse completa:', JSON.stringify(uploadResponse, null, 2));
-      console.log('═══════════════════════════════════════════════');
 
       // Validar y convertir fileId si es necesario
       if (!fileId && fileId !== 0) {
@@ -226,48 +195,19 @@ export const SubmissionModal = ({
 
       // Asegurar que fileId es un número
       if (typeof fileId !== 'number') {
-        console.warn('⚠️ fileId no es número, convirtiendo:', fileId, '→', Number(fileId));
         fileId = Number(fileId);
         if (isNaN(fileId)) {
           throw new Error('No se pudo convertir fileId a número válido');
         }
       }
-      
-      console.log('');
-      console.log('═══════════════════════════════════════════════');
-      console.log('✅ Archivo subido exitosamente');
-      console.log('═══════════════════════════════════════════════');
-      console.log('   - fileId:', fileId, '(type:', typeof fileId, ')');
-      console.log('   - imageUrl:', uploadResponse.imageUrl);
-      console.log('═══════════════════════════════════════════════');
-      console.log('');
 
       // PASO 2: Crear el submission con userChallengeId y type
       const submissionPayload: SubmissionCreateDTO = {
         userChallengeId: Number(userChallengeId),
         type: validationType,
       };
-
-      console.log('');
-      console.log('═══════════════════════════════════════════════');
-      console.log('📤 PASO 2: Creando submission');
-      console.log('═══════════════════════════════════════════════');
-      console.log('📋 Body a enviar:');
-      console.log(JSON.stringify(submissionPayload, null, 2));
-      console.log('   - userChallengeId:', submissionPayload.userChallengeId, '(type:', typeof submissionPayload.userChallengeId, ')');
-      console.log('   - type:', submissionPayload.type, '(type:', typeof submissionPayload.type, ')');
-      console.log('═══════════════════════════════════════════════');
       
       const submission = await createSubmission(submissionPayload);
-      
-      console.log('');
-      console.log('═══════════════════════════════════════════════');
-      console.log('✅ Submission creado exitosamente');
-      console.log('═══════════════════════════════════════════════');
-      console.log('   - ID:', submission.id, '(type:', typeof submission.id, ')');
-      console.log('   - Status:', submission.status);
-      console.log('═══════════════════════════════════════════════');
-      console.log('');
 
       // PASO 3: Asociar el archivo al submission
       console.log('');
