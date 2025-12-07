@@ -27,8 +27,10 @@ import { useReactions } from '@/hooks/useReactions';
 import { useComments } from '@/hooks/useComments';
 import { useUserChallenge } from '@/hooks/useUserChallenge';
 import { useSubmissionProgress } from '@/hooks/useSubmissionProgress';
+import { useBadgeLogic } from '@/hooks/useBadgeLogic';
 import { useAuth } from '@/contexts/AuthContext';
 import { SubmissionModal } from '@/components/SubmissionModal';
+import { BadgeUnlockedModal } from '@/components/BadgeUnlockedModal';
 import { ProgressDisplay } from '@/components/UI';
 import { SubmissionsGrid } from '@/components/SubmissionsGrid';
 import { transformDocumentUrl } from '@/utils/image-url.util';
@@ -57,12 +59,15 @@ export default function ChallengeDetailScreen() {
   const [recentlyEarnedPoints, setRecentlyEarnedPoints] = useState(0);
   const [userChallengeId, setUserChallengeId] = useState<number | null>(null);
   const [fullChallenge, setFullChallenge] = useState<any>(null);
+  const [unlockedBadge, setUnlockedBadge] = useState<any>(null);
+  const [badgeModalVisible, setBadgeModalVisible] = useState(false);
 
   // Ref para recargr las submissions después de un upload exitoso
   const submissionsGridRef = useRef<any>(null);
 
   // Hooks
   const { userProgress, loadProgress: loadUserProgress, refreshProgress } = useSubmissionProgress();
+  const { isChallengeFull } = useBadgeLogic();
 
   // Use reactions hook
   const {
@@ -546,15 +551,29 @@ export default function ChallengeDetailScreen() {
                 />
               </View>
 
-              {/* Register Progress Button */}
-              <TouchableOpacity
-                style={[styles.progressButton, { backgroundColor: colors.primary }]}
-                activeOpacity={0.8}
-                onPress={() => setSubmissionModalVisible(true)}
-              >
-                <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
-                <Text style={styles.progressButtonText}>Registrar Avance</Text>
-              </TouchableOpacity>
+              {/* Check if challenge is full before showing button */}
+              {!isChallengeFull(userProgress?.progressPercent || challenge.userProgress || 0) ? (
+                <TouchableOpacity
+                  style={[styles.progressButton, { backgroundColor: colors.primary }]}
+                  activeOpacity={0.8}
+                  onPress={() => setSubmissionModalVisible(true)}
+                >
+                  <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
+                  <Text style={styles.progressButtonText}>Registrar Avance</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={[styles.progressButton, { backgroundColor: colors.border, flexDirection: 'column', gap: Spacing.xs }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                    <Ionicons name="checkmark-circle" size={24} color={colors.textSecondary} />
+                    <Text style={[styles.progressButtonText, { color: colors.textSecondary }]}>
+                      Reto completado
+                    </Text>
+                  </View>
+                  <Text style={[styles.progressButtonSubtext, { color: colors.textSecondary }]}>
+                    No se pueden enviar más avances
+                  </Text>
+                </View>
+              )}
             </>
           )}
 
@@ -749,6 +768,20 @@ export default function ChallengeDetailScreen() {
             setTimeout(() => {
               setLastSubmissionStatus(null);
             }, 3000);
+            
+            // Check for newly earned badges
+            if (completeUser?.id) {
+              const { checkAndAwardBadges } = useBadgeLogic();
+              checkAndAwardBadges(completeUser.id).then((newBadges) => {
+                if (newBadges && newBadges.length > 0) {
+                  // Show badge modal for the first newly earned badge
+                  setUnlockedBadge(newBadges[0]);
+                  setBadgeModalVisible(true);
+                }
+              }).catch((err) => {
+                console.error('Error checking badges:', err);
+              });
+            }
           } else if (submission?.status === 'PENDING') {
             setLastSubmissionStatus('pending');
           }
@@ -772,6 +805,19 @@ export default function ChallengeDetailScreen() {
         challenge={fullChallenge || challenge}
         userChallengeId={userChallengeId}
         editingSubmission={editingSubmission}
+      />
+
+      {/* Badge Unlocked Modal */}
+      <BadgeUnlockedModal
+        visible={badgeModalVisible}
+        badgeName={unlockedBadge?.name || ''}
+        badgeDescription={unlockedBadge?.description || ''}
+        badgeDifficulty={unlockedBadge?.difficulty || ''}
+        badgeImageUrl={unlockedBadge?.imageUrl}
+        onClose={() => {
+          setBadgeModalVisible(false);
+          setUnlockedBadge(null);
+        }}
       />
     </KeyboardAvoidingView>
     </>
@@ -1017,6 +1063,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  progressButtonSubtext: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   divider: {
     height: 1,
