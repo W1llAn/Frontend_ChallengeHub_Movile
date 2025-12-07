@@ -31,12 +31,9 @@ import { useBadgeLogic } from '@/hooks/useBadgeLogic';
 import { useAuth } from '@/contexts/AuthContext';
 import { SubmissionModal } from '@/components/SubmissionModal';
 import { BadgeUnlockedModal } from '@/components/BadgeUnlockedModal';
-import { ProgressDisplay } from '@/components/UI';
+import { ProgressDisplay, ReportModal } from '@/components/UI';
 import { SubmissionsGrid } from '@/components/SubmissionsGrid';
-import { transformDocumentUrl } from '@/utils/image-url.util';
-import { ReportModal } from '@/components/UI';
-import { useAuth } from '@/contexts/AuthContext';
-import { transformChallengeImageUrl } from '@/utils/image-url.util';
+import { transformDocumentUrl, transformChallengeImageUrl } from '@/utils/image-url.util';
 
 const { width } = Dimensions.get('window');
 
@@ -837,7 +834,7 @@ export default function ChallengeDetailScreen() {
           setUnlockedBadge(null);
         }}
       />
-    </KeyboardAvoidingView>
+      </View>
     </>
   );
 }
