@@ -18,3 +18,5 @@ export { ProgressDisplay } from "./ProgressDisplay";
 export { SubmissionCard } from "./SubmissionCard";
 export { SubmissionPreview } from "./SubmissionPreview";
 export { SubmissionDetailModal } from "./SubmissionDetailModal";
+export { default as BadgesGrid } from "./BadgesGrid";
+export { default as BadgeModal } from "./BadgeModal";
