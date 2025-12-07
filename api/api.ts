@@ -67,9 +67,10 @@ class ApiService {
   public client = axios.create({
     baseURL: API_BASE_URL,
     timeout: 20000,
-    // No añadir la cabecera personalizada en web: provoca preflight CORS extra
+    // No establecer Content-Type por defecto para permitir que axios lo detecte automáticamente
+    // Esto es importante para FormData (multipart/form-data) en uploads de archivos
     headers: (() => {
-      const base: Record<string, string> = { "Content-Type": "application/json" };
+      const base: Record<string, string> = {};
       try {
         if (Platform.OS !== "web") {
           base["ngrok-skip-browser-warning"] = "true";
@@ -106,20 +107,25 @@ class ApiService {
           if (token) {
             config.headers = config.headers ?? {};
             (config.headers as any).Authorization = `Bearer ${token}`;
-
-            // Información de debugging
-            const method = (config.method || "GET").toString().toUpperCase();
-            console.log("\n===== API REQUEST =====");
-            console.log("Method:", method);
-            console.log(
-              "URL:",
-              config.baseURL ? `${config.baseURL}${config.url}` : config.url
-            );
-            console.log("Token (masked):", maskToken(token));
-            console.log("=======================\n");
-          } else {
-            console.warn("⚠️ No token disponible en storage para la petición");
           }
+
+          // Establecer Content-Type solo si no es FormData
+          // FormData debe ser detectado automáticamente por axios como multipart/form-data
+          if (!(config.data instanceof FormData) && !config.headers["Content-Type"]) {
+            config.headers["Content-Type"] = "application/json";
+          }
+
+          // Información de debugging
+          const method = (config.method || "GET").toString().toUpperCase();
+          console.log("\n===== API REQUEST =====");
+          console.log("Method:", method);
+          console.log(
+            "URL:",
+            config.baseURL ? `${config.baseURL}${config.url}` : config.url
+          );
+          console.log("Token (masked):", maskToken(token));
+          console.log("Content-Type:", config.headers["Content-Type"] || "auto-detected");
+          console.log("=======================\n");
         } catch (err) {
           console.error("❌ Error en request interceptor:", err);
         }
