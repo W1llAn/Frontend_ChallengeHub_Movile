@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   ScrollView,
@@ -12,6 +12,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
@@ -19,10 +20,18 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors, { BorderRadius, Shadows, Spacing } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { getCategoryIcon } from '@/services/category-icons.service';
+import { getChallengeById } from '@/services/challenge.service';
 import { ChallengeStatus } from '@/types/api/challenge.type';
+import { listChallengesByUser } from '@/services/user-challenge.service';
 import { useReactions } from '@/hooks/useReactions';
 import { useComments } from '@/hooks/useComments';
 import { useUserChallenge } from '@/hooks/useUserChallenge';
+import { useSubmissionProgress } from '@/hooks/useSubmissionProgress';
+import { useAuth } from '@/contexts/AuthContext';
+import { SubmissionModal } from '@/components/SubmissionModal';
+import { ProgressDisplay } from '@/components/UI';
+import { SubmissionsGrid } from '@/components/SubmissionsGrid';
+import { transformDocumentUrl } from '@/utils/image-url.util';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +40,7 @@ export default function ChallengeDetailScreen() {
   const router = useRouter();
   const colorScheme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   const colors = Colors[colorScheme];
+  const { completeUser } = useAuth();
 
   // Parse challenge data from params
   const challenge = params.challenge ? JSON.parse(params.challenge as string) : null;
@@ -41,6 +51,18 @@ export default function ChallengeDetailScreen() {
   const [editingText, setEditingText] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [submissionModalVisible, setSubmissionModalVisible] = useState(false);
+  const [editingSubmission, setEditingSubmission] = useState<any>(null);
+  const [lastSubmissionStatus, setLastSubmissionStatus] = useState<'approved' | 'pending' | null>(null);
+  const [recentlyEarnedPoints, setRecentlyEarnedPoints] = useState(0);
+  const [userChallengeId, setUserChallengeId] = useState<number | null>(null);
+  const [fullChallenge, setFullChallenge] = useState<any>(null);
+
+  // Ref para recargr las submissions después de un upload exitoso
+  const submissionsGridRef = useRef<any>(null);
+
+  // Hooks
+  const { userProgress, loadProgress: loadUserProgress, refreshProgress } = useSubmissionProgress();
 
   // Use reactions hook
   const {
@@ -149,11 +171,87 @@ export default function ChallengeDetailScreen() {
         refreshReactions?.(),
         refreshComments(),
         checkSubscription(),
+        // Recargar el progreso del usuario
+        completeUser?.id && challenge?.id 
+          ? refreshProgress(completeUser.id, challenge.id)
+          : Promise.resolve(),
       ]);
     } catch (error) {
       console.error('Error refreshing:', error);
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  // Cargar progreso cuando el componente se monta o cuando el usuario se suscribe
+  useEffect(() => {
+    if (completeUser?.id && challenge?.id && isSubscribed) {
+      loadUserProgress(completeUser.id, challenge.id);
+    }
+  }, [completeUser?.id, challenge?.id, isSubscribed, loadUserProgress]);
+
+  // Obtener userChallengeId cuando el usuario está suscrito
+  useEffect(() => {
+    const fetchUserChallengeId = async () => {
+      if (!completeUser?.id || !isSubscribed || !challenge?.id) {
+        setUserChallengeId(null);
+        return;
+      }
+
+      try {
+        const userChallenges = await listChallengesByUser(completeUser.id);
+        // Buscar el userChallengeId para este reto
+        const userChallenge = userChallenges.find(uc => uc.challengeId === challenge.id);
+        if (userChallenge) {
+          setUserChallengeId(userChallenge.id);
+        }
+      } catch (error) {
+        console.error('Error fetching userChallengeId:', error);
+        setUserChallengeId(null);
+      }
+    };
+
+    fetchUserChallengeId();
+  }, [completeUser?.id, isSubscribed, challenge?.id]);
+
+  // Cargar los datos completos del desafío incluyendo settings (validationType, requireReview, etc)
+  useEffect(() => {
+    const fetchFullChallenge = async () => {
+      if (!challenge?.id) return;
+
+      try {
+        const fullData = await getChallengeById(challenge.id);
+        setFullChallenge(fullData);
+      } catch (error) {
+        console.error('Error fetching full challenge data:', error);
+        // Si falla, usar el desafío que viene de params
+        setFullChallenge(challenge);
+      }
+    };
+
+    fetchFullChallenge();
+  }, [challenge?.id]);
+
+  const handleDownloadPdf = async (fileUrl: string, fileName: string) => {
+    try {
+      // Transformar la URL para usar la IP correcta en lugar de localhost
+      const transformedUrl = transformDocumentUrl(fileUrl);
+      
+      // Si el archivo ya está en una URL accesible (MinIO), abrir directamente
+      if (transformedUrl && transformedUrl.startsWith('http')) {
+        // En React Native, usamos Linking para abrir URLs
+        const supported = await Linking.canOpenURL(transformedUrl);
+        if (supported) {
+          await Linking.openURL(transformedUrl);
+        } else {
+          Alert.alert('Error', 'No se puede descargar el archivo');
+        }
+      } else {
+        Alert.alert('Error', 'URL del archivo no válida');
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      Alert.alert('Error', 'No se pudo descargar el archivo');
     }
   };
 
@@ -435,21 +533,56 @@ export default function ChallengeDetailScreen() {
             </View>
           </View>
 
-          {/* Progress Button - Only show if subscribed */}
+          {/* Progress Section - Always show for subscribed users */}
           {isSubscribed && (
-            <TouchableOpacity
-              style={[styles.progressButton, { backgroundColor: colors.primary }]}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.progressButtonText}>Registrar Avance</Text>
-            </TouchableOpacity>
+            <>
+              {/* Always show current progress */}
+              <View style={[styles.section, { backgroundColor: 'transparent', marginBottom: Spacing.lg }]}>
+                <ProgressDisplay
+                  progress={userProgress?.progressPercent || challenge.userProgress || 0}
+                  status={lastSubmissionStatus === 'approved' ? 'approved' : undefined}
+                  pointsEarned={recentlyEarnedPoints}
+                  colors={colors}
+                />
+              </View>
+
+              {/* Register Progress Button */}
+              <TouchableOpacity
+                style={[styles.progressButton, { backgroundColor: colors.primary }]}
+                activeOpacity={0.8}
+                onPress={() => setSubmissionModalVisible(true)}
+              >
+                <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
+                <Text style={styles.progressButtonText}>Registrar Avance</Text>
+              </TouchableOpacity>
+            </>
           )}
 
           {/* Divider */}
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-        
+          {/* Submissions Grid Section - Only show for subscribed users */}
+          {isSubscribed && (
+            <SubmissionsGrid
+              ref={submissionsGridRef}
+              userChallengeId={userChallengeId || 0}
+              challengeTitle={challenge?.title}
+              onAddNew={() => {
+                setEditingSubmission(null);
+                setSubmissionModalVisible(true);
+              }}
+              onEdit={(submission) => {
+                setEditingSubmission(submission);
+                setSubmissionModalVisible(true);
+              }}
+              onDelete={async (submissionId) => {
+                // Delete will be handled by the modal component
+              }}
+              onDownload={(fileUrl, fileName) => {
+                handleDownloadPdf(fileUrl, fileName);
+              }}
+            />
+          )}
 
           {/* Comments Section */}
           <View style={[styles.commentsSection, { backgroundColor: 'transparent' }]}>
@@ -599,6 +732,48 @@ export default function ChallengeDetailScreen() {
           </View>
         
       </ScrollView>
+
+      {/* Submission Modal */}
+      <SubmissionModal
+        visible={submissionModalVisible}
+        onClose={() => {
+          setSubmissionModalVisible(false);
+          setEditingSubmission(null);
+        }}
+        onSuccess={(submission) => {
+          // Check if auto-approved
+          if (submission?.status === 'APPROVED') {
+            setLastSubmissionStatus('approved');
+            setRecentlyEarnedPoints(submission?.pointsAwarded || 0);
+            // Clear the success message after 3 seconds
+            setTimeout(() => {
+              setLastSubmissionStatus(null);
+            }, 3000);
+          } else if (submission?.status === 'PENDING') {
+            setLastSubmissionStatus('pending');
+          }
+          
+          // Recargar el progreso inmediatamente
+          if (completeUser?.id && challenge?.id) {
+            refreshProgress(completeUser.id, challenge.id);
+          }
+          
+          // Recargar los submissions en el grid
+          if (submissionsGridRef.current?.refresh) {
+            console.log('🔄 Llamando a refresh en SubmissionsGrid...');
+            submissionsGridRef.current.refresh().catch((err: any) => {
+              console.error('❌ Error recargando submissions:', err);
+            });
+          }
+          
+          onRefresh();
+          setSubmissionModalVisible(false);
+          setEditingSubmission(null);
+        }}
+        challenge={fullChallenge || challenge}
+        userChallengeId={userChallengeId}
+        editingSubmission={editingSubmission}
+      />
     </KeyboardAvoidingView>
     </>
   );
