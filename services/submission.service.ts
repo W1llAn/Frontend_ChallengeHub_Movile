@@ -2,9 +2,12 @@ import api from "../api/api";
 import {
   SubmissionCreateDTO,
   SubmissionFileCreateDTO,
+  SubmissionUpdateDTO,
   SubmissionFileResponseDTO,
   SubmissionReviewDTO,
   SubmissionResponseDTO,
+  UserChallengePointsDTO,
+  UserTotalPointsDTO,
 } from "../types/api/submission.type";
 
 export const SubmissionService = {
@@ -128,11 +131,115 @@ export const SubmissionService = {
   },
 
   /**
-   * Eliminar envío
-   * Solo el usuario que envió (o el creador del reto) puede eliminar
-   * Solo puede eliminarse si es el último envío
+   * Editar submission completo
+   * Solo disponible si el submission está en estado PENDING
+   * Permite cambiar el tipo de validación y/o reemplazar el archivo
+   * 
+   * @param submissionId ID del submission a editar
+   * @param payload Tipo de validación y opcionalmente nuevo fileId
+   * @returns Datos del submission actualizado
+   * 
+   * El archivo anterior se elimina automáticamente si se proporciona un nuevo fileId
+   */
+  update: async (
+    submissionId: number,
+    payload: SubmissionUpdateDTO
+  ): Promise<SubmissionResponseDTO> => {
+    console.log(
+      `🔧 SubmissionService.update - submissionId: ${submissionId}`,
+      payload
+    );
+    const { data } = await api.put(
+      `/submissions/${submissionId}`,
+      payload
+    );
+    console.log("✅ Submission actualizado:", data);
+    return data;
+  },
+
+  /**
+   * Eliminar submission completo
+   * Solo disponible si el submission está en estado PENDING
+   * Elimina todos los archivos asociados del bucket
+   * 
+   * @param submissionId ID del submission a eliminar
+   */
+  deleteSubmission: async (submissionId: number): Promise<void> => {
+    console.log(`🔧 SubmissionService.deleteSubmission - submissionId: ${submissionId}`);
+    await api.delete(`/submissions/${submissionId}`);
+    console.log("✅ Submission eliminado completamente");
+  },
+
+  /**
+   * @deprecated Usar update() en su lugar
+   */
+  updateFile: async (
+    submissionId: number,
+    submissionFileId: number,
+    payload: SubmissionUpdateDTO
+  ): Promise<SubmissionFileResponseDTO> => {
+    console.log(
+      `🔧 SubmissionService.updateFile - submissionId: ${submissionId}, fileId: ${submissionFileId}`,
+      payload
+    );
+    const { data } = await api.patch(
+      `/submissions/${submissionId}/files/${submissionFileId}`,
+      payload
+    );
+    console.log("✅ Archivo actualizado:", data);
+    return data;
+  },
+
+  /**
+   * @deprecated Usar deleteSubmission() en su lugar
+   */
+  deleteFile: async (
+    submissionId: number,
+    submissionFileId: number
+  ): Promise<void> => {
+    console.log(
+      `🔧 SubmissionService.deleteFile - submissionId: ${submissionId}, fileId: ${submissionFileId}`
+    );
+    await api.delete(`/submissions/${submissionId}/files/${submissionFileId}`);
+    console.log("✅ Archivo eliminado");
+  },
+
+  /**
+   * @deprecated Usar deleteSubmission() en su lugar
    */
   delete: async (submissionId: number): Promise<void> => {
     await api.delete(`/submissions/${submissionId}`);
+  },
+
+  /**
+   * Obtener puntos de un usuario en un reto específico
+   * Retorna los puntos totales acumulados, número de avances aprobados y porcentaje de progreso
+   * 
+   * @param userId ID del usuario
+   * @param challengeId ID del reto
+   * @returns Puntos del usuario en ese reto específico
+   */
+  getPointsByUserAndChallenge: async (
+    userId: number,
+    challengeId: number
+  ): Promise<UserChallengePointsDTO> => {
+    const { data } = await api.get(
+      `/submissions/points/user/${userId}/challenge/${challengeId}`
+    );
+    return data;
+  },
+
+  /**
+   * Obtener todos los puntos de un usuario en todos sus retos
+   * Retorna desglosados los puntos por cada reto en el que está suscrito
+   * 
+   * @param userId ID del usuario
+   * @returns Puntos totales y desglose por reto
+   */
+  getTotalPointsByUser: async (userId: number): Promise<UserTotalPointsDTO> => {
+    const { data } = await api.get(
+      `/submissions/points/user/${userId}`
+    );
+    return data;
   },
 };

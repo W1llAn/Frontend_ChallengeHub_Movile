@@ -12,6 +12,19 @@ export interface SubmissionFileCreateDTO {
   role: FileRole;
 }
 
+export interface SubmissionUpdateDTO {
+  type: ValidationType;
+  fileId?: number; 
+}
+
+/**
+ * @deprecated Usar SubmissionUpdateDTO en su lugar
+ */
+export interface SubmissionFileUpdateDTO {
+  fileId: number;
+  role: FileRole;
+}
+
 export interface SubmissionReviewDTO {
   status: SubmissionStatus; // approved | rejected
   feedback?: string;
@@ -50,6 +63,21 @@ export interface SubmissionResponseDTO {
   pointsAwarded: number;
   createdAt: string;
   files: SubmissionFileResponseDTO[];
+}
+
+export interface UserChallengePointsDTO {
+  challengeId: number;
+  challengeTitle: string;
+  totalPoints: number;
+  approvedSubmissionsCount: number;
+  progressPercent: number;
+}
+
+export interface UserTotalPointsDTO {
+  userId: number;
+  username: string;
+  totalPoints: number;
+  pointsByChallenge: UserChallengePointsDTO[];
 }
 
 
