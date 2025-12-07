@@ -14,3 +14,6 @@ export { useComments } from "./useComments";
 export { useReactions } from "./useReactions";
 export { useUserChallenge } from "./useUserChallenge";
 export { useChallengeSettings } from "./useChallengeSettings";
+export { useBadges } from "./useBadges";
+export { useUserPoints } from "./useUserPoints";
+export { useBadgeLogic } from "./useBadgeLogic";
