@@ -17,3 +17,4 @@ export { useChallengeSettings } from "./useChallengeSettings";
 export { useBadges } from "./useBadges";
 export { useUserPoints } from "./useUserPoints";
 export { useBadgeLogic } from "./useBadgeLogic";
+export { useReports } from "./useReports";

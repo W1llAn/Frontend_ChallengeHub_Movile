@@ -34,6 +34,9 @@ import { BadgeUnlockedModal } from '@/components/BadgeUnlockedModal';
 import { ProgressDisplay } from '@/components/UI';
 import { SubmissionsGrid } from '@/components/SubmissionsGrid';
 import { transformDocumentUrl } from '@/utils/image-url.util';
+import { ReportModal } from '@/components/UI';
+import { useAuth } from '@/contexts/AuthContext';
+import { transformChallengeImageUrl } from '@/utils/image-url.util';
 
 const { width } = Dimensions.get('window');
 
@@ -68,6 +71,9 @@ export default function ChallengeDetailScreen() {
   // Hooks
   const { userProgress, loadProgress: loadUserProgress, refreshProgress } = useSubmissionProgress();
   const { isChallengeFull } = useBadgeLogic();
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportCommentModalVisible, setReportCommentModalVisible] = useState(false);
+  const [selectedCommentToReport, setSelectedCommentToReport] = useState<{ id: number; content: string } | null>(null);
 
   // Use reactions hook
   const {
@@ -130,6 +136,14 @@ export default function ChallengeDetailScreen() {
       } catch (error) {
         Alert.alert('Error', 'No se pudo actualizar el comentario');
       }
+    }
+  };
+
+  const handleLongPressComment = (comment: any) => {
+    // Solo permitir reportar comentarios de otros usuarios
+    if (completeUser && comment.userId !== completeUser.id) {
+      setSelectedCommentToReport({ id: comment.id, content: comment.content });
+      setReportCommentModalVisible(true);
     }
   };
 
@@ -316,10 +330,8 @@ export default function ChallengeDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView
+      <View
         style={[styles.container, { backgroundColor: colors.background }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
       {/* Custom Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -351,7 +363,7 @@ export default function ChallengeDetailScreen() {
         <View style={styles.imageContainer}>
           {challenge.imageUrl ? (
             <Image
-              source={{ uri: challenge.imageUrl }}
+              source={{ uri: transformChallengeImageUrl(challenge.imageUrl) || '' }}
               style={styles.challengeImage}
               resizeMode="cover"
             />
@@ -422,7 +434,7 @@ export default function ChallengeDetailScreen() {
                   style={styles.menuItem}
                   onPress={() => {
                     setMenuVisible(false);
-                    Alert.alert('Reportar', 'Funcionalidad próximamente');
+                    setReportModalVisible(true);
                   }}
                   activeOpacity={0.7}
                 >
@@ -657,7 +669,13 @@ export default function ChallengeDetailScreen() {
             ) : (
               <View style={styles.commentsList}>
                 {comments.map((comment) => (
-                  <View key={comment.id} style={styles.commentItem}>
+                  <TouchableOpacity
+                    key={comment.id}
+                    style={styles.commentItem}
+                    activeOpacity={0.7}
+                    onLongPress={() => handleLongPressComment(comment)}
+                    delayLongPress={500}
+                  >
                     <View style={[styles.commentAvatar, { backgroundColor: colors.primary + '20' }]}>
                       <Text style={[styles.commentAvatarText, { color: colors.primary }]}>
                         {comment.userName.charAt(0).toUpperCase()}
@@ -743,7 +761,7 @@ export default function ChallengeDetailScreen() {
                         </>
                       )}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
