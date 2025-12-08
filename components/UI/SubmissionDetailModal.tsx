@@ -84,30 +84,82 @@ export const SubmissionDetailModal = ({
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Eliminar avance',
-      '¿Estás seguro de que deseas eliminar este avance? Esta acción no se puede deshacer.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            if (onDelete) {
-              setDeleting(true);
-              try {
-                await onDelete();
-                onClose();
-              } catch (error) {
-                Alert.alert('Error', 'No se pudo eliminar el avance');
-              } finally {
-                setDeleting(false);
+    // Validar si se puede eliminar basado en el estado
+    if (submission.status === 'APPROVED') {
+      Alert.alert(
+        'No se puede eliminar',
+        'Los avances aprobados no pueden ser eliminados. Solo se pueden eliminar avances que están siendo revisados o fueron rechazados.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
+
+    if (submission.status === 'PENDING') {
+      Alert.alert(
+        'Eliminar avance en revisión',
+        '¿Estás seguro de que deseas eliminar este avance? La acción no se puede deshacer y perderás los puntos asociados.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Eliminar',
+            style: 'destructive',
+            onPress: async () => {
+              if (onDelete) {
+                setDeleting(true);
+                try {
+                  await onDelete();
+                  Alert.alert(
+                    'Eliminado',
+                    'Tu avance ha sido eliminado correctamente',
+                    [{ text: 'OK', onPress: onClose }]
+                  );
+                } catch (error: any) {
+                  const errorMessage = error?.response?.data?.message || 
+                    'No se pudo eliminar el avance. Intenta nuevamente.';
+                  Alert.alert('Error al eliminar', errorMessage);
+                } finally {
+                  setDeleting(false);
+                }
               }
-            }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+      return;
+    }
+
+    if (submission.status === 'REJECTED') {
+      Alert.alert(
+        'Eliminar avance rechazado',
+        '¿Deseas eliminar este avance rechazado? Podrás cargar un nuevo intento después.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Eliminar',
+            style: 'destructive',
+            onPress: async () => {
+              if (onDelete) {
+                setDeleting(true);
+                try {
+                  await onDelete();
+                  Alert.alert(
+                    'Eliminado',
+                    'Tu avance ha sido eliminado. Puedes intentar nuevamente.',
+                    [{ text: 'OK', onPress: onClose }]
+                  );
+                } catch (error: any) {
+                  const errorMessage = error?.response?.data?.message || 
+                    'No se pudo eliminar el avance. Intenta nuevamente.';
+                  Alert.alert('Error al eliminar', errorMessage);
+                } finally {
+                  setDeleting(false);
+                }
+              }
+            },
+          },
+        ]
+      );
+    }
   };
 
   const statusConfig = getStatusConfig(submission.status);
@@ -322,7 +374,7 @@ export const SubmissionDetailModal = ({
                   </TouchableOpacity>
                 )}
 
-                {(submission.status === 'PENDING' || submission.status === 'APPROVED') && onEdit && (
+                {submission.status === 'PENDING' && onEdit && (
                   <TouchableOpacity
                     style={[styles.actionButton, { backgroundColor: colors.primary }]}
                     onPress={onEdit}
@@ -331,6 +383,23 @@ export const SubmissionDetailModal = ({
                     <Ionicons name="create" size={20} color="#FFFFFF" />
                     <Text style={styles.actionButtonText}>Editar</Text>
                   </TouchableOpacity>
+                )}
+
+                {submission.status === 'APPROVED' && (
+                  <View
+                    style={[
+                      styles.infoBox,
+                      {
+                        backgroundColor: colors.success + '15',
+                        borderColor: colors.success,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="lock-closed" size={18} color={colors.success} />
+                    <Text style={[styles.infoBoxText, { color: colors.success }]}>
+                      Este avance fue aprobado y no puede ser editado
+                    </Text>
+                  </View>
                 )}
 
                 {onDelete && (
@@ -493,6 +562,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+  },
+  infoBoxText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 18,
   },
   disabledMessage: {
     fontSize: 12,
