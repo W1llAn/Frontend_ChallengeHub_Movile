@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   StyleSheet,
-  FlatList,
   View as RNView,
   TouchableOpacity,
   ActivityIndicator,
@@ -154,20 +153,37 @@ export const SubmissionsGrid = forwardRef<SubmissionsGridHandle, SubmissionsGrid
     );
   }
 
+  // Render submissions in 2-column grid
+  const renderSubmissionsGrid = () => {
+    if (sortedSubmissions.length === 0) {
+      return renderEmptyState();
+    }
+
+    const pairs: SubmissionResponseDTO[][] = [];
+    for (let i = 0; i < sortedSubmissions.length; i += 2) {
+      pairs.push(sortedSubmissions.slice(i, i + 2));
+    }
+
+    return (
+      <View style={styles.gridContent}>
+        {pairs.map((pair, rowIndex) => (
+          <View key={`row-${rowIndex}`} style={styles.gridRow}>
+            {pair.map((submission) => (
+              <View key={submission.id.toString()} style={styles.gridCell}>
+                {renderSubmissionCard({ item: submission })}
+              </View>
+            ))}
+            {pair.length === 1 && <View style={styles.gridCellEmpty} />}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: 'transparent' }]}>
-      <FlatList
-        ListHeaderComponent={renderHeader}
-        data={sortedSubmissions}
-        renderItem={renderSubmissionCard}
-        keyExtractor={(item) => item.id.toString()}
-        numColumns={2}
-        columnWrapperStyle={styles.gridRow}
-        contentContainerStyle={styles.gridContent}
-        scrollEnabled={false}
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-      />
+      {renderHeader()}
+      {renderSubmissionsGrid()}
 
       {/* Detail Modal */}
       <SubmissionDetailModal
@@ -185,7 +201,7 @@ export const SubmissionsGrid = forwardRef<SubmissionsGridHandle, SubmissionsGrid
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
@@ -208,20 +224,27 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   loadingContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: Spacing.xl * 3,
   },
   gridContent: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.lg,
     gap: Spacing.md,
   },
   gridRow: {
+    flexDirection: 'row',
     gap: Spacing.md,
+    justifyContent: 'space-between',
+  },
+  gridCell: {
+    flex: 1,
+  },
+  gridCellEmpty: {
+    flex: 1,
   },
   emptyState: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.xl * 2,
