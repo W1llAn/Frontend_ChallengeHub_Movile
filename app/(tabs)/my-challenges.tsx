@@ -9,7 +9,8 @@ import {
   Animated,
   PanResponder,
   View as RNView,
-  Platform
+  Platform,
+  RefreshControl
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { useUserChallenges } from '../../hooks/useUserChallenges';
@@ -21,11 +22,12 @@ import { getCategoryIcon } from '@/services/category-icons.service';
 import { ChallengeCard } from '@/components/UI/ChallengeCard';
 
 export default function MyChallengesScreen() {
-  const { challenges, loading, error } = useUserChallenges();
+  const { challenges, loading, error, refetch } = useUserChallenges();
   const colorScheme = useColorScheme() || 'light';
   const colors = Colors[colorScheme];
   const [selectedChallenge, setSelectedChallenge] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Función para formatear fechas
   const formatDate = (dateString: string) => {
@@ -55,6 +57,13 @@ export default function MyChallengesScreen() {
   const closeChallengeDetails = () => {
     setModalVisible(false);
     setSelectedChallenge(null);
+  };
+
+  // Función para refrescar la lista
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
   };
 
 
@@ -463,6 +472,16 @@ export default function MyChallengesScreen() {
           />
         )}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+            title="Actualizando retos..."
+            titleColor={colors.textSecondary}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No tienes retos asignados</Text>

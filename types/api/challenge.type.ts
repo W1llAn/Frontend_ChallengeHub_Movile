@@ -5,6 +5,9 @@ export enum ChallengeStatus {
   BLOCKED = "BLOCKED"
 }
 
+export type ValidationType = "PHOTO" | "PDF";
+export type FrequencyType = "DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "CUSTOM";
+
 export interface Challenge {
   id: number;
   title: string;
@@ -19,6 +22,11 @@ export interface Challenge {
   creatorId: number;
   creatorUsername: string;
   progress?: number; // Optional field for user progress
+  // Challenge settings properties
+  validationType?: ValidationType; // PHOTO | PDF
+  requireReview?: boolean; // Si requiere revisión manual
+  frequency?: FrequencyType; // DAILY, WEEKLY, etc.
+  pointsPerSubmission?: number; // Puntos por cada submission aprobado
 }
 
 export interface UserChallenge {

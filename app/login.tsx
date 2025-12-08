@@ -17,6 +17,8 @@ import {
   ScrollView,
   StyleSheet,
   useWindowDimensions,
+  Text as RNText,
+  View as RNView,
 } from "react-native";
 
 export default function LoginScreen() {
@@ -108,6 +110,7 @@ export default function LoginScreen() {
             title="Retos Emocionantes"
             description="Participa en desafíos diarios y compite con usuarios de todo el mundo"
             colors={colors}
+            colorScheme={colorScheme}
           />
 
           <FeatureCard
@@ -115,6 +118,7 @@ export default function LoginScreen() {
             title="Gana Medallas"
             description="Desbloquea logros exclusivos y colecciona medallas únicas"
             colors={colors}
+            colorScheme={colorScheme}
           />
 
           <FeatureCard
@@ -122,6 +126,7 @@ export default function LoginScreen() {
             title="Bonificaciones"
             description="Obtén recompensas increíbles por tus victorias y progreso"
             colors={colors}
+            colorScheme={colorScheme}
           />
         </View>
 
@@ -129,22 +134,27 @@ export default function LoginScreen() {
         <View style={[styles.ctaSection, { backgroundColor: "transparent" }]}>
           <Pressable
             style={({ pressed }) => [
-              styles.loginButton,
-              { backgroundColor: colors.primary },
-              pressed && styles.loginButtonPressed,
+              {
+                width: "100%",
+                maxWidth: 300,
+                opacity: pressed ? 0.8 : 1,
+              },
             ]}
             onPress={handleLogin}
+            testID="login-button"
           >
-            <Ionicons
-              name="log-in-outline"
-              size={24}
-              color={colors.textInverse}
-            />
-            <Text
-              style={[styles.loginButtonText, { color: colors.textInverse }]}
-            >
-              Iniciar Sesión
-            </Text>
+            <RNView style={[styles.loginButton, { backgroundColor: "#591D87" }]}>
+              <Ionicons
+                name="log-in-outline"
+                size={24}
+                color="#FFFFFF"
+              />
+              <RNText
+                style={[styles.loginButtonText, { color: "#FFFFFF" }]}
+              >
+                Iniciar Sesión
+              </RNText>
+            </RNView>
           </Pressable>
 
           <Text
@@ -173,9 +183,10 @@ interface FeatureCardProps {
   title: string;
   description: string;
   colors: typeof Colors.light;
+  colorScheme: "light" | "dark";
 }
 
-function FeatureCard({ icon, title, description, colors }: FeatureCardProps) {
+function FeatureCard({ icon, title, description, colors, colorScheme }: FeatureCardProps) {
   return (
     <View
       style={[
@@ -190,7 +201,12 @@ function FeatureCard({ icon, title, description, colors }: FeatureCardProps) {
       <View
         style={[
           styles.featureIconContainer,
-          { backgroundColor: colors.primaryLight + "20" },
+          {
+            backgroundColor:
+              colorScheme === "light"
+                ? "rgba(114, 50, 168, 0.12)"
+                : "rgba(182, 127, 232, 0.12)",
+          },
         ]}
       >
         <Ionicons name={icon} size={32} color={colors.primary} />
@@ -317,10 +333,14 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 300,
     gap: Spacing.sm,
-  },
-  loginButtonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   loginButtonText: {
     fontSize: 18,

@@ -6,14 +6,19 @@ import {
   SafeAreaView,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, View } from "@/components/Themed";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
+import { useBadges } from "@/hooks/useBadges";
+import { useUserPoints } from "@/hooks/useUserPoints";
 import { useFormValidation, validationRules } from "@/hooks/useFormValidation";
 import { showNotifier } from "@/services/notifier";
 import { countriesService } from "@/services/countries.service";
+import { ImageService } from "@/services/image.service";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
 import {
@@ -27,6 +32,7 @@ import {
   Badge,
   Select,
   DatePickerInput,
+  BadgesGrid,
 } from "@/components/UI";
 import type { UserItselfUpdateDTO } from "@/types/api/user.type";
 import type { Country } from "@/services/countries.service";
@@ -47,6 +53,12 @@ export default function ProfileScreen() {
     error: userError,
   } = useUsers();
 
+  const { userBadges, loading: badgesLoading, error: badgesError, refreshBadges } = useBadges(
+    currentUser?.id || null
+  );
+
+  const { userPoints, totalPoints, refreshPoints } = useUserPoints(currentUser?.id || null);
+
   // Estado local de edición
   const [isEditing, setIsEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,6 +76,11 @@ export default function ProfileScreen() {
   });
   const { errors, validateForm, setFieldError, getFieldError, clearErrors } = useFormValidation();
   const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Estado para manejo de avatar
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   // Cargar países cuando entra a edición
   useEffect(() => {
@@ -147,14 +164,74 @@ export default function ProfileScreen() {
     setFieldError(field, null);
   };
 
+  // Manejar cambio de avatar
+  const handleAvatarChange = async () => {
+    try {
+      // Solicitar permisos de la galería
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        showNotifier("Se necesitan permisos para acceder a la galería", "warn");
+        return;
+      }
+
+      // Abrir selector de imagen
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const selectedAsset = result.assets[0];
+        setSelectedImageUri(selectedAsset.uri);
+        setAvatarError(null);
+        
+        // Subir imagen al servidor
+        setUploadingAvatar(true);
+        
+        try {
+          // Convertir URI a File para React Native
+          const file = {
+            uri: selectedAsset.uri,
+            type: selectedAsset.type === "image" ? "image/jpeg" : selectedAsset.mimeType || "image/jpeg",
+            name: selectedAsset.fileName || `avatar_${Date.now()}.jpg`,
+            size: selectedAsset.fileSize || 0,
+          };
+          
+          const uploadResponse = await ImageService.upload(file as any);
+          
+          if (uploadResponse.imageUrl) {
+            // Actualizar formData con la nueva URL del avatar
+            setFormData((prev) => ({
+              ...prev,
+              avatarUrl: uploadResponse.imageUrl,
+            }));
+            showNotifier("Avatar actualizado correctamente", "success");
+          } else {
+            throw new Error("No se recibió URL del archivo");
+          }
+        } catch (uploadError) {
+          console.error("Error subiendo avatar:", uploadError);
+          const errorMsg = uploadError instanceof Error ? uploadError.message : "Error al subir el avatar";
+          setAvatarError(errorMsg);
+          showNotifier(errorMsg, "error");
+          setSelectedImageUri(null);
+        } finally {
+          setUploadingAvatar(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error seleccionando imagen:", error);
+      showNotifier("Error al seleccionar imagen", "error");
+    }
+  };
+
   // Guardar cambios
   const handleSaveProfile = async () => {
-    // Definir reglas de validación
+    // Definir reglas de validación (username no se valida porque está bloqueado)
     const rules = {
-      username: [
-        validationRules.required("El nombre de usuario es requerido"),
-        validationRules.username(),
-      ],
       email: [
         validationRules.required("El correo es requerido"),
         validationRules.email(),
@@ -311,17 +388,21 @@ export default function ProfileScreen() {
     ])
   );
 
-  // Refrescar datos - CORREGIDO
+  // Refrescar datos
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await refreshCurrentUser();
+      await Promise.all([
+        refreshCurrentUser(),
+        refreshPoints(),
+        refreshBadges(),
+      ]);
     } catch (error) {
       console.error("Error refreshing:", error);
     } finally {
       setRefreshing(false);
     }
-  }, [refreshCurrentUser]);
+  }, [refreshCurrentUser, refreshPoints, refreshBadges]);
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -337,17 +418,32 @@ export default function ProfileScreen() {
     },
     avatarSection: {
       alignItems: "center",
-      marginBottom: 24,
+      marginBottom: 28,
+      paddingBottom: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
     },
     avatarContainer: {
-      marginBottom: 12,
+      marginBottom: 16,
+      position: "relative",
+    },
+    avatarLoadingOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.3)",
+      borderRadius: 100,
+      justifyContent: "center",
+      alignItems: "center",
     },
     userInfo: {
       alignItems: "center",
-      marginBottom: 8,
+      marginBottom: 12,
     },
     username: {
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: "700",
       color: colors.text,
       marginBottom: 4,
@@ -356,23 +452,34 @@ export default function ProfileScreen() {
       fontSize: 13,
       color: colors.textSecondary,
     },
-    pointsContainer: {
+    statsRow: {
       flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-      gap: 8,
-      marginTop: 8,
+      justifyContent: "space-around",
+      gap: 16,
+      marginTop: 16,
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
     },
-    points: {
-      fontSize: 14,
-      fontWeight: "600",
+    statItem: {
+      alignItems: "center",
+      gap: 6,
+      flex: 1,
+    },
+    statValue: {
+      fontSize: 18,
+      fontWeight: "800",
       color: colors.primary,
     },
-    statusBadge: {
-      marginTop: 12,
+    statLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      fontWeight: "600",
+      textTransform: "uppercase",
+      letterSpacing: 0.3,
     },
     section: {
-      marginBottom: 20,
+      marginBottom: 24,
     },
     buttonRow: {
       flexDirection: "row",
@@ -472,11 +579,34 @@ export default function ProfileScreen() {
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>
               <Avatar
-                source={currentUser.avatarUrl}
+                source={selectedImageUri || currentUser.avatarUrl}
                 initials={currentUser.username?.substring(0, 2).toUpperCase()}
                 size="large"
               />
+              {uploadingAvatar && (
+                <View style={styles.avatarLoadingOverlay}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+              )}
             </View>
+
+            {/* Botón de cambio de avatar en modo edición */}
+            {isEditing && (
+              <View style={{ marginTop: 12, marginBottom: 8 }}>
+                <Button
+                  label={uploadingAvatar ? "Subiendo..." : "Cambiar Avatar"}
+                  onPress={handleAvatarChange}
+                  variant="outline"
+                  disabled={uploadingAvatar}
+                  fullWidth={false}
+                />
+                {avatarError && (
+                  <Text style={{ color: colors.error, fontSize: 12, marginTop: 8, textAlign: "center" }}>
+                    {avatarError}
+                  </Text>
+                )}
+              </View>
+            )}
 
             {/* User Info */}
             <View style={styles.userInfo}>
@@ -484,19 +614,24 @@ export default function ProfileScreen() {
               <Text style={styles.email}>{currentUser.email}</Text>
             </View>
 
-            {/* Points */}
-            <View style={styles.pointsContainer}>
-              <Text style={styles.points}>⭐ {currentUser.points} Puntos</Text>
-            </View>
-
-            {/* Status Badge */}
-            <View style={styles.statusBadge}>
-              <Badge
-                label={currentUser.profileStatus || "Activo"}
-                variant={
-                  currentUser.profileStatus === "ACTIVE" ? "success" : "warning"
-                }
-              />
+            {/* Stats Row */}
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{totalPoints}</Text>
+                <Text style={styles.statLabel}>Puntos</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {userBadges?.totalBadges || 0}
+                </Text>
+                <Text style={styles.statLabel}>Insignias</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {currentUser.profileStatus === "public" ? "Público" : "Privado"}
+                </Text>
+                <Text style={styles.statLabel}>Perfil</Text>
+              </View>
             </View>
           </View>
 
@@ -594,13 +729,14 @@ export default function ProfileScreen() {
               <>
                 <Card style={styles.infoCard}>
                   <Input
-                    label="Nombre de Usuario"
+                    label="Nombre de Usuario (No editable)"
                     placeholder="Tu nombre de usuario"
                     value={formData.username}
                     onChangeText={(value) =>
                       handleInputChange("username", value)
                     }
                     error={getFieldError("username")}
+                    editable={false}
                   />
                 </Card>
 
@@ -706,17 +842,68 @@ export default function ProfileScreen() {
             )}
           </View>
 
-          {/* Statistics Section */}
+          {/* Points Breakdown Section */}
           {!isEditing && (
             <View style={styles.section}>
-              <SectionHeader title="Estadísticas" />
-              <Card>
-                <InfoRow label="Puntos Totales" value={currentUser.points} />
-                <InfoRow
-                  label="Estado"
-                  value={currentUser.profileStatus || "N/A"}
+              <SectionHeader title="Desglose de Puntos" />
+              {userPoints && userPoints.pointsByChallenge && userPoints.pointsByChallenge.length > 0 ? (
+                <Card>
+                  {userPoints.pointsByChallenge.map((challenge, index) => (
+                    <View key={challenge.challengeId}>
+                      <View style={{ marginBottom: 12 }}>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                          <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text, flex: 1, marginRight: 12 }}>
+                            {challenge.challengeTitle}
+                          </Text>
+                          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.primary }}>
+                            {challenge.totalPoints} pts
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+                          {challenge.approvedSubmissionsCount} envío{challenge.approvedSubmissionsCount !== 1 ? 's' : ''} aprobado{challenge.approvedSubmissionsCount !== 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                      {index < userPoints.pointsByChallenge.length - 1 && (
+                        <View style={{ height: 1, backgroundColor: colors.borderLight, marginVertical: 8 }} />
+                      )}
+                    </View>
+                  ))}
+                </Card>
+              ) : (
+                <Card>
+                  <View style={{ alignItems: "center", paddingVertical: 20 }}>
+                    <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+                      No tienes puntos aún
+                    </Text>
+                  </View>
+                </Card>
+              )}
+            </View>
+          )}
+
+          {/* Badges Section */}
+          {!isEditing && (
+            <View style={styles.section}>
+              <SectionHeader title="Tus Insignias" />
+              {userBadges && userBadges.badges.length > 0 ? (
+                <BadgesGrid
+                  badges={userBadges.badges}
+                  loading={badgesLoading}
+                  error={badgesError}
+                  totalBadges={userBadges.totalBadges}
                 />
-              </Card>
+              ) : (
+                <Card>
+                  <View style={{ alignItems: "center", paddingVertical: 20 }}>
+                    <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 8 }}>
+                      No tienes insignias aún
+                    </Text>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary, textAlign: "center" }}>
+                      Completa retos y consigue insignias
+                    </Text>
+                  </View>
+                </Card>
+              )}
             </View>
           )}
         </View>
@@ -724,3 +911,4 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
+
