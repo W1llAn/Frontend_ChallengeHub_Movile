@@ -17,12 +17,9 @@ interface SubmissionCardProps {
   colors: typeof Colors.light;
 }
 
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 48) / 2; // 2 columns with padding
-
 /**
  * Card mejorado para mostrar un avance con mejor UI/UX
- * Muestra preview visual, fecha, tipo, estado y puntos
+ * Muestra información clara: tipo, fecha, estado y puntos
  */
 export const SubmissionCard = memo(
   ({ submission, isLatest, onPress, colors }: SubmissionCardProps) => {
@@ -30,28 +27,28 @@ export const SubmissionCard = memo(
       switch (status) {
         case 'APPROVED':
           return {
-            icon: 'checkmark-circle',
+            icon: 'checkmark-circle' as const,
             color: colors.success,
-            backgroundColor: colors.success + '20',
+            backgroundColor: colors.success + '15',
             label: 'Aprobado',
           };
         case 'PENDING':
           return {
-            icon: 'time',
+            icon: 'time' as const,
             color: colors.warning,
-            backgroundColor: colors.warning + '20',
+            backgroundColor: colors.warning + '15',
             label: 'Pendiente',
           };
         case 'REJECTED':
           return {
-            icon: 'close-circle',
+            icon: 'close-circle' as const,
             color: colors.error,
-            backgroundColor: colors.error + '20',
+            backgroundColor: colors.error + '15',
             label: 'Rechazado',
           };
         default:
           return {
-            icon: 'help-circle',
+            icon: 'help-circle' as const,
             color: colors.textSecondary,
             backgroundColor: colors.backgroundSecondary,
             label: 'Desconocido',
@@ -68,6 +65,7 @@ export const SubmissionCard = memo(
     const formattedDate = new Date(submission.periodKey).toLocaleDateString('es-ES', {
       month: 'short',
       day: 'numeric',
+      year: 'numeric',
     });
 
     return (
@@ -78,14 +76,13 @@ export const SubmissionCard = memo(
             backgroundColor: colors.surface,
             borderColor: isLatest ? colors.primary : colors.border,
             borderWidth: isLatest ? 2 : 1,
-            width: cardWidth,
           },
           Shadows.small,
         ]}
         onPress={onPress}
         activeOpacity={0.7}
       >
-        {/* Latest Badge */}
+        {/* Header: Latest Badge */}
         {isLatest && (
           <View
             style={[
@@ -98,8 +95,8 @@ export const SubmissionCard = memo(
           </View>
         )}
 
-        {/* Top Section: Icon and Status */}
-        <View style={[styles.topSection, { backgroundColor: 'transparent' }]}>
+        {/* Icon and File Type */}
+        <View style={[styles.headerSection, { backgroundColor: 'transparent' }]}>
           <View
             style={[
               styles.iconContainer,
@@ -108,44 +105,54 @@ export const SubmissionCard = memo(
           >
             <Ionicons
               name={fileIcon}
-              size={32}
+              size={28}
               color={colors.primary}
             />
           </View>
-
-          {/* Status Badge - Removed per design request */}
-          {/* Previously showed checkmark/clock/X icon based on status */}
-        </View>
-
-        {/* Middle Section: Date and Type */}
-        <View style={[styles.middleSection, { backgroundColor: 'transparent' }]}>
-          <Text style={[styles.type, { color: colors.text }]} numberOfLines={1}>
+          <Text style={[styles.fileType, { color: colors.text }]}>
             {submission.type === 'PDF' ? 'PDF' : 'FOTO'}
           </Text>
-          <Text style={[styles.date, { color: colors.textSecondary }]}>
-            {formattedDate}
-          </Text>
-          <Text style={[styles.statusLabel, { color: statusConfig.color }]}>
+        </View>
+
+        {/* Date */}
+        <Text style={[styles.date, { color: colors.textSecondary }]}>
+          {formattedDate}
+        </Text>
+
+        {/* Status Badge */}
+        <View
+          style={[
+            styles.statusBadge,
+            { backgroundColor: statusConfig.backgroundColor },
+          ]}
+        >
+          <Ionicons
+            name={statusConfig.icon}
+            size={14}
+            color={statusConfig.color}
+          />
+          <Text style={[styles.statusText, { color: statusConfig.color }]}>
             {statusConfig.label}
           </Text>
         </View>
 
-        {/* Bottom Section: Points or Feedback */}
-        <View style={[styles.bottomSection, { backgroundColor: 'transparent' }]}>
-          {submission.status === 'APPROVED' && submission.pointsAwarded > 0 && (
-            <View style={[styles.pointsBadge, { backgroundColor: colors.primary + '15' }]}>
-              <Ionicons name="star" size={12} color={colors.primary} />
-              <Text style={[styles.pointsText, { color: colors.primary }]}>
-                +{submission.pointsAwarded}
-              </Text>
-            </View>
-          )}
-          {submission.status === 'REJECTED' && submission.feedback && (
-            <View style={[styles.feedbackPill]}>
-              <Ionicons name="alert-circle" size={12} color={colors.error} />
-            </View>
-          )}
-        </View>
+        {/* Footer: Points or Feedback */}
+        {submission.status === 'APPROVED' && submission.pointsAwarded > 0 && (
+          <View style={[styles.pointsBadge, { backgroundColor: colors.primary + '15' }]}>
+            <Ionicons name="star" size={13} color={colors.primary} />
+            <Text style={[styles.pointsText, { color: colors.primary }]}>
+              +{submission.pointsAwarded} pts
+            </Text>
+          </View>
+        )}
+        {submission.status === 'REJECTED' && submission.feedback && (
+          <View style={[styles.feedbackBadge, { backgroundColor: colors.error + '15' }]}>
+            <Ionicons name="alert-circle" size={13} color={colors.error} />
+            <Text style={[styles.feedbackText, { color: colors.error }]}>
+              Con comentarios
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   }
@@ -156,8 +163,11 @@ SubmissionCard.displayName = 'SubmissionCard';
 const styles = StyleSheet.create({
   card: {
     borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
+    padding: Spacing.lg,
+    paddingTop: Spacing.xl, // Más espacio en la parte superior para el badge
     position: 'relative',
+    minHeight: 220,
+    justifyContent: 'space-between',
   },
   latestBadge: {
     position: 'absolute',
@@ -165,78 +175,103 @@ const styles = StyleSheet.create({
     right: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: BorderRadius.md,
+    zIndex: 10, // Asegurar que esté encima
   },
   latestBadgeText: {
     fontSize: 10,
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  topSection: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+  headerSection: {
+    flexDirection: 'column',
+    alignItems: 'center',
     gap: Spacing.sm,
+    marginBottom: Spacing.md,
+    marginTop: Spacing.sm, // Evitar superposición con el badge
   },
   iconContainer: {
-    width: 50,
-    height: 50,
+    width: 56,
+    height: 56,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statusBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  middleSection: {
-    marginBottom: Spacing.md,
-    gap: Spacing.xs,
-  },
-  type: {
-    fontSize: 13,
+  fileType: {
+    fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   date: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
+    marginVertical: Spacing.xs,
   },
-  statusLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  bottomSection: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    marginVertical: Spacing.md,
+    alignSelf: 'center',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   pointsBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 2,
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,
+    alignSelf: 'flex-start',
+    marginTop: Spacing.sm,
   },
   pointsText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
   },
-  feedbackPill: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#EF4444',
+  feedbackBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    alignSelf: 'flex-start',
+    marginTop: Spacing.sm,
+  },
+  feedbackText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Deprecated styles - kept for reference
+  topSection: {
+    display: 'none',
+  },
+  middleSection: {
+    display: 'none',
+  },
+  bottomSection: {
+    display: 'none',
+  },
+  type: {
+    display: 'none',
+  },
+  statusLabel: {
+    display: 'none',
+  },
+  statusBadgeOld: {
+    display: 'none',
+  },
+  feedbackPill: {
+    display: 'none',
   },
 });
