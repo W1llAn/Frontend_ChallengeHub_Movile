@@ -13,6 +13,47 @@ import {
 } from '@/types/api/submission.type';
 import { Alert } from 'react-native';
 
+/**
+ * Extrae un mensaje de error descriptivo de la respuesta del servidor
+ */
+const extractErrorMessage = (err: any): string => {
+  // Primer intento: mensaje del servidor en response.data
+  if (err?.response?.data?.message) {
+    return err.response.data.message;
+  }
+
+  // Segundo intento: error personalizado en response.data.error
+  if (err?.response?.data?.error) {
+    return err.response.data.error;
+  }
+
+  // Tercer intento: detalles específicos de validación
+  if (err?.response?.data?.details) {
+    return err.response.data.details;
+  }
+
+  // Cuarto intento: mensaje del error estándar
+  if (err?.message) {
+    return err.message;
+  }
+
+  // Fallback por código de estado HTTP
+  const status = err?.response?.status;
+  if (status === 400) {
+    return 'Datos inválidos. Verifica que todos los campos sean correctos.';
+  } else if (status === 403) {
+    return 'No tienes permiso para realizar esta acción. Solo puedes editar/eliminar tus propios avances aprobados.';
+  } else if (status === 404) {
+    return 'El avance no fue encontrado. Intenta recargar la página.';
+  } else if (status === 409) {
+    return 'Este avance ya fue aprobado y no puede ser modificado.';
+  } else if (status === 500) {
+    return 'Error del servidor. Intenta nuevamente más tarde.';
+  }
+
+  return 'Error desconocido. Intenta nuevamente.';
+};
+
 interface UseSubmissionsReturn {
   submissions: SubmissionResponseDTO[];
   loading: boolean;
@@ -75,7 +116,7 @@ export const useSubmissions = (): UseSubmissionsReturn => {
         
         return response;
       } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || err?.message || 'Error al crear el submission';
+        const errorMessage = extractErrorMessage(err);
         setError(errorMessage);
         throw err;
       } finally {
@@ -118,7 +159,7 @@ export const useSubmissions = (): UseSubmissionsReturn => {
         
         return response;
       } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || err?.message || 'Error al agregar el archivo';
+        const errorMessage = extractErrorMessage(err);
         setError(errorMessage);
         throw err;
       } finally {
@@ -157,7 +198,7 @@ export const useSubmissions = (): UseSubmissionsReturn => {
         
         return response;
       } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || err?.message || 'Error al actualizar el submission';
+        const errorMessage = extractErrorMessage(err);
         setError(errorMessage);
         throw err;
       } finally {
@@ -184,7 +225,7 @@ export const useSubmissions = (): UseSubmissionsReturn => {
         const data = await SubmissionService.listByUserChallenge(userChallengeId);
         setSubmissions(data);
       } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || 'Error al cargar los submissions';
+        const errorMessage = extractErrorMessage(err);
         console.error('❌ Error en loadSubmissionsByUserChallenge:', errorMessage);
         setError(errorMessage);
         setSubmissions([]);
@@ -214,7 +255,7 @@ export const useSubmissions = (): UseSubmissionsReturn => {
         
         console.log('✅ Submission eliminado completamente');
       } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || 'Error al eliminar el submission';
+        const errorMessage = extractErrorMessage(err);
         setError(errorMessage);
         throw err;
       } finally {
@@ -242,7 +283,7 @@ export const useSubmissions = (): UseSubmissionsReturn => {
         const data = await SubmissionService.getPointsByUserAndChallenge(userId, challengeId);
         return data;
       } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || 'Error al obtener los puntos';
+        const errorMessage = extractErrorMessage(err);
         setError(errorMessage);
         throw err;
       } finally {
@@ -265,7 +306,7 @@ export const useSubmissions = (): UseSubmissionsReturn => {
         const data = await SubmissionService.getTotalPointsByUser(userId);
         return data;
       } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || 'Error al obtener los puntos totales';
+        const errorMessage = extractErrorMessage(err);
         setError(errorMessage);
         throw err;
       } finally {
