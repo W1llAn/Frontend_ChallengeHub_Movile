@@ -6,7 +6,9 @@ import {
   SafeAreaView,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, View } from "@/components/Themed";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +18,7 @@ import { useUserPoints } from "@/hooks/useUserPoints";
 import { useFormValidation, validationRules } from "@/hooks/useFormValidation";
 import { showNotifier } from "@/services/notifier";
 import { countriesService } from "@/services/countries.service";
+import { ImageService } from "@/services/image.service";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
 import {
@@ -73,6 +76,11 @@ export default function ProfileScreen() {
   });
   const { errors, validateForm, setFieldError, getFieldError, clearErrors } = useFormValidation();
   const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Estado para manejo de avatar
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   // Cargar países cuando entra a edición
   useEffect(() => {
@@ -156,14 +164,74 @@ export default function ProfileScreen() {
     setFieldError(field, null);
   };
 
+  // Manejar cambio de avatar
+  const handleAvatarChange = async () => {
+    try {
+      // Solicitar permisos de la galería
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        showNotifier("Se necesitan permisos para acceder a la galería", "warn");
+        return;
+      }
+
+      // Abrir selector de imagen
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const selectedAsset = result.assets[0];
+        setSelectedImageUri(selectedAsset.uri);
+        setAvatarError(null);
+        
+        // Subir imagen al servidor
+        setUploadingAvatar(true);
+        
+        try {
+          // Convertir URI a File para React Native
+          const file = {
+            uri: selectedAsset.uri,
+            type: selectedAsset.type === "image" ? "image/jpeg" : selectedAsset.mimeType || "image/jpeg",
+            name: selectedAsset.fileName || `avatar_${Date.now()}.jpg`,
+            size: selectedAsset.fileSize || 0,
+          };
+          
+          const uploadResponse = await ImageService.upload(file as any);
+          
+          if (uploadResponse.imageUrl) {
+            // Actualizar formData con la nueva URL del avatar
+            setFormData((prev) => ({
+              ...prev,
+              avatarUrl: uploadResponse.imageUrl,
+            }));
+            showNotifier("Avatar actualizado correctamente", "success");
+          } else {
+            throw new Error("No se recibió URL del archivo");
+          }
+        } catch (uploadError) {
+          console.error("Error subiendo avatar:", uploadError);
+          const errorMsg = uploadError instanceof Error ? uploadError.message : "Error al subir el avatar";
+          setAvatarError(errorMsg);
+          showNotifier(errorMsg, "error");
+          setSelectedImageUri(null);
+        } finally {
+          setUploadingAvatar(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error seleccionando imagen:", error);
+      showNotifier("Error al seleccionar imagen", "error");
+    }
+  };
+
   // Guardar cambios
   const handleSaveProfile = async () => {
-    // Definir reglas de validación
+    // Definir reglas de validación (username no se valida porque está bloqueado)
     const rules = {
-      username: [
-        validationRules.required("El nombre de usuario es requerido"),
-        validationRules.username(),
-      ],
       email: [
         validationRules.required("El correo es requerido"),
         validationRules.email(),
@@ -357,6 +425,18 @@ export default function ProfileScreen() {
     },
     avatarContainer: {
       marginBottom: 16,
+      position: "relative",
+    },
+    avatarLoadingOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.3)",
+      borderRadius: 100,
+      justifyContent: "center",
+      alignItems: "center",
     },
     userInfo: {
       alignItems: "center",
@@ -499,11 +579,34 @@ export default function ProfileScreen() {
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>
               <Avatar
-                source={currentUser.avatarUrl}
+                source={selectedImageUri || currentUser.avatarUrl}
                 initials={currentUser.username?.substring(0, 2).toUpperCase()}
                 size="large"
               />
+              {uploadingAvatar && (
+                <View style={styles.avatarLoadingOverlay}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+              )}
             </View>
+
+            {/* Botón de cambio de avatar en modo edición */}
+            {isEditing && (
+              <View style={{ marginTop: 12, marginBottom: 8 }}>
+                <Button
+                  label={uploadingAvatar ? "Subiendo..." : "Cambiar Avatar"}
+                  onPress={handleAvatarChange}
+                  variant="outline"
+                  disabled={uploadingAvatar}
+                  fullWidth={false}
+                />
+                {avatarError && (
+                  <Text style={{ color: colors.error, fontSize: 12, marginTop: 8, textAlign: "center" }}>
+                    {avatarError}
+                  </Text>
+                )}
+              </View>
+            )}
 
             {/* User Info */}
             <View style={styles.userInfo}>
@@ -626,13 +729,14 @@ export default function ProfileScreen() {
               <>
                 <Card style={styles.infoCard}>
                   <Input
-                    label="Nombre de Usuario"
+                    label="Nombre de Usuario (No editable)"
                     placeholder="Tu nombre de usuario"
                     value={formData.username}
                     onChangeText={(value) =>
                       handleInputChange("username", value)
                     }
                     error={getFieldError("username")}
+                    editable={false}
                   />
                 </Card>
 

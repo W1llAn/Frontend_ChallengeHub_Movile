@@ -65,15 +65,16 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
   };
 
   const getRoleBadgeColor = (role: string) => {
-    switch (role.toUpperCase()) {
-      case "ADMIN":
-        return "#E53935";
-      case "CREATOR":
+    switch (role.toLowerCase()) {
+      case "administrador":
+        return "#eb8482ff";
+      case "user":
         return colors.primary;
       default:
         return colors.textSecondary;
     }
   };
+
 
   return (
     <Modal
@@ -82,6 +83,127 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
       animationType="fade"
       onRequestClose={onClose}
     >
+      {creator.profileStatus.toLowerCase() === 'private' ? (
+        <RNView style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.backdrop}
+            activeOpacity={1}
+            onPress={onClose}
+          />
+          <Animated.View
+            style={[
+              styles.privateProfileContainer,
+              {
+                backgroundColor: colors.background,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            {/* Close button */}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close" size={28} color={colors.text} />
+            </TouchableOpacity>
+
+            {/* Avatar */}
+            <RNView style={styles.privateAvatarContainer}>
+              <RNView
+                style={[
+                  styles.privateAvatar,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                {(() => {
+                  const transformedUrl = transformAvatarUrl(creator.avatarUrl);
+                  return transformedUrl ? (
+                    <Image
+                      source={{ uri: transformedUrl }}
+                      style={styles.privateAvatar}
+                    />
+                  ) : (
+                    <Text style={[styles.avatarText, { color: colors.primary }]}>
+                      {creator.username.charAt(0).toUpperCase()}
+                    </Text>
+                  );
+                })()}
+              </RNView>
+            </RNView>
+
+            {/* Username and role */}
+            <Text style={[styles.privateUsername, { color: colors.text }]}>
+              @{creator.username}
+            </Text>
+            <RNView
+              style={[
+                styles.roleBadge,
+                { backgroundColor: getRoleBadgeColor(creator.role) + "30" },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.roleText,
+                  { color: getRoleBadgeColor(creator.role) },
+                ]}
+              >
+                {creator.role}
+              </Text>
+            </RNView>
+
+            {/* Lock icon and message */}
+            <RNView style={styles.privateMessageContainer}>
+              <RNView
+                style={[
+                  styles.lockIconContainer,
+                  { backgroundColor: colors.surface },
+                ]}
+              >
+                <Ionicons
+                  name="lock-closed"
+                  size={48}
+                  color={colors.textSecondary}
+                />
+              </RNView>
+
+              <Text style={[styles.privateTitle, { color: colors.text }]}>
+                Perfil Privado
+              </Text>
+              <Text
+                style={[styles.privateDescription, { color: colors.textSecondary }]}
+              >
+                Este usuario ha configurado su perfil como privado. La información detallada no está disponible públicamente.
+              </Text>
+
+              {/* Info badge */}
+              <RNView
+                style={[
+                  styles.privateInfoBadge,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="information-circle"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text
+                  style={[styles.privateInfoText, { color: colors.textSecondary }]}
+                >
+                  Solo se muestra información básica
+                </Text>
+              </RNView>
+            </RNView>
+          </Animated.View>
+        </RNView>
+      ) : (
       <RNView style={styles.modalOverlay}>
         <TouchableOpacity
           style={styles.backdrop}
@@ -307,6 +429,7 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
           </ScrollView>
         </Animated.View>
       </RNView>
+      )}
     </Modal>
   );
 };
@@ -454,5 +577,83 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginLeft: 28,
+  },
+  // Estilos para perfil privado
+  privateProfileContainer: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: "70%",
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 16,
+      },
+    }),
+  },
+  privateAvatarContainer: {
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  privateAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  privateUsername: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  privateMessageContainer: {
+    marginTop: 40,
+    alignItems: "center",
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  lockIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  privateTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  privateDescription: {
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+    paddingHorizontal: 12,
+  },
+  privateInfoBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  privateInfoText: {
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
