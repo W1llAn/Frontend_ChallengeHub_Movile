@@ -25,6 +25,8 @@ import {
   FileRole,
 } from '@/types/api/submission.type';
 import { validateDateByFrequency } from '@/utils/submission.util';
+import { ChallengeSettingsService } from '@/services/challengeSettings.service';
+import { ChallengeSettingsResponseDTO } from '@/types/api/challengeSettings.type';
 
 interface SubmissionModalProps {
   visible: boolean;
@@ -82,17 +84,41 @@ export const SubmissionModal = ({
 
   // Estado local
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [challengeSettings, setChallengeSettings] = useState<ChallengeSettingsResponseDTO | null>(null);
+  const [loadingSettings, setLoadingSettings] = useState(false);
 
   // Limpiar errores cuando se abre/cierra el modal
   useEffect(() => {
     if (visible) {
       clearUploadError();
       clearSubmissionError();
+      // Cargar configuración del reto cuando se abre el modal
+      if (challenge?.id) {
+        loadChallengeSettings(challenge.id);
+      }
     } else {
       clearFiles();
       setSelectedDate(new Date());
+      setChallengeSettings(null);
     }
-  }, [visible]);
+  }, [visible, challenge?.id]);
+
+  /**
+   * Cargar la configuración del reto desde el backend
+   */
+  const loadChallengeSettings = useCallback(async (challengeId: number) => {
+    try {
+      setLoadingSettings(true);
+      const settings = await ChallengeSettingsService.getByChallenge(challengeId);
+      setChallengeSettings(settings);
+    } catch (err) {
+      console.error('Error cargando configuración del reto:', err);
+      // Si no se puede cargar, usar valores por defecto
+      setChallengeSettings(null);
+    } finally {
+      setLoadingSettings(false);
+    }
+  }, []);
 
   /**
    * Valida que la fecha no sea en el futuro
@@ -118,7 +144,7 @@ export const SubmissionModal = ({
     // Si estamos editando, solo necesitamos subir el archivo y actualizar
     if (editingSubmission) {
       try {
-        const validationType = challenge?.validationType || 'PHOTO';
+        const validationType = challengeSettings?.validationType || 'PHOTO';
         // Subir el nuevo archivo
         const uploadResponse = await uploadFile(selectedFile, validationType);
         let fileId = uploadResponse?.fileId;
@@ -176,7 +202,7 @@ export const SubmissionModal = ({
     }
 
     // Validar fecha según la frecuencia del reto
-    const dateValidation = validateDateByFrequency(selectedDate, challenge.frequency);
+    const dateValidation = validateDateByFrequency(selectedDate, challengeSettings?.frequency || 'DAILY');
     if (!dateValidation.valid) {
       Alert.alert('Error', dateValidation.error);
       return;
@@ -184,7 +210,7 @@ export const SubmissionModal = ({
 
     try {
       // PASO 1: Subir el archivo primero (obtener fileId del servidor)
-      const validationType = challenge.validationType || 'PHOTO';
+      const validationType = challengeSettings?.validationType || 'PHOTO';
       const uploadResponse = await uploadFile(selectedFile, validationType);
       let fileId = uploadResponse?.fileId;
 
@@ -244,7 +270,7 @@ export const SubmissionModal = ({
       Alert.alert(
         'Éxito',
         `Tu avance ha sido registrado${
-          challenge.requireReview
+          challengeSettings?.requireReview
             ? ' y está en revisión'
             : ' y aprobado automáticamente'
         }`,
@@ -269,19 +295,6 @@ export const SubmissionModal = ({
       Alert.alert('Error', errorMessage);
     }
   }, [userChallengeId, challenge, selectedFile, selectedDate, editingSubmission, uploadFile, createSubmission, addFileToSubmission, updateSubmission, clearFiles, onClose, onSuccess]);
-
-  const handleDateChange = (offset: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + offset);
-    
-    // Validar fecha según la frecuencia del reto
-    const dateValidation = validateDateByFrequency(newDate, challenge?.frequency);
-    if (dateValidation.valid) {
-      setSelectedDate(newDate);
-    } else {
-      Alert.alert('Error', dateValidation.error);
-    }
-  };
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('es-ES', {
@@ -368,7 +381,7 @@ export const SubmissionModal = ({
             </View>
           </View>
 
-          {/* Date Selector */}
+          {/* Date Selector - Read Only */}
           <View style={[styles.section, { backgroundColor: 'transparent' }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Fecha del Período
@@ -376,43 +389,18 @@ export const SubmissionModal = ({
             <View
               style={[
                 styles.dateSelectorContainer,
-                { backgroundColor: colors.surface, borderColor: colors.border },
+                { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
               ]}
             >
-              <TouchableOpacity
-                onPress={() => handleDateChange(-1)}
-                disabled={isLoading}
-                activeOpacity={0.6}
-              >
-                <Ionicons
-                  name="chevron-back"
-                  size={24}
-                  color={colors.primary}
-                  style={{ opacity: isLoading ? 0.5 : 1 }}
-                />
-              </TouchableOpacity>
-
               <View style={{ flex: 1, alignItems: 'center', backgroundColor: 'transparent' }}>
                 <Text style={[styles.selectedDate, { color: colors.text }]}>
                   {formatDate(selectedDate)}
                 </Text>
-                <Text style={[styles.dateInfo, { color: colors.textTertiary }]}>
+                <Text style={[styles.dateInfo, { color: colors.textSecondary }]}>
                   {selectedDate.getFullYear()}
                 </Text>
               </View>
-
-              <TouchableOpacity
-                onPress={() => handleDateChange(1)}
-                disabled={isLoading}
-                activeOpacity={0.6}
-              >
-                <Ionicons
-                  name="chevron-forward"
-                  size={24}
-                  color={colors.primary}
-                  style={{ opacity: isLoading ? 0.5 : 1 }}
-                />
-              </TouchableOpacity>
+              
             </View>
           </View>
 
@@ -422,20 +410,20 @@ export const SubmissionModal = ({
               Subir Evidencia
             </Text>
             <FileUploadArea
-              validationType={challenge?.validationType || 'PHOTO'}
+              validationType={challengeSettings?.validationType || 'PHOTO'}
               selectedFile={selectedFile}
               uploading={uploading}
               uploadProgress={uploadProgress}
               error={error}
-              onPickPhoto={() => pickPhotoFromGallery(challenge?.validationType || 'PHOTO')}
-              onPickPdf={() => pickPdfDocument(challenge?.validationType || 'PDF')}
+              onPickPhoto={() => pickPhotoFromGallery(challengeSettings?.validationType || 'PHOTO')}
+              onPickPdf={() => pickPdfDocument(challengeSettings?.validationType || 'PDF')}
               onRemoveFile={removeFile}
               colors={colors}
             />
           </View>
 
           {/* Review Status Info */}
-          {challenge?.requireReview && (
+          {challengeSettings?.requireReview && (
             <View
               style={[
                 styles.reviewInfo,
@@ -449,7 +437,7 @@ export const SubmissionModal = ({
             </View>
           )}
 
-          {!challenge?.requireReview && (
+          {!challengeSettings?.requireReview && (
             <View
               style={[
                 styles.reviewInfo,
@@ -565,18 +553,24 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   dateSelectorContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    justifyContent: 'center',
     paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    gap: Spacing.lg,
+    gap: Spacing.xs,
   },
   selectedDate: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
+    marginBottom: Spacing.xs,
+  },
+  dateHint: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: Spacing.xs,
   },
   dateInfo: {
     fontSize: 12,
