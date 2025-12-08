@@ -67,7 +67,7 @@ export default function ChallengeDetailScreen() {
 
   // Hooks
   const { userProgress, loadProgress: loadUserProgress, refreshProgress } = useSubmissionProgress();
-  const { isChallengeFull } = useBadgeLogic();
+  const { isChallengeFull, checkAndAwardBadges } = useBadgeLogic();
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportCommentModalVisible, setReportCommentModalVisible] = useState(false);
   const [selectedCommentToReport, setSelectedCommentToReport] = useState<{ id: number; content: string } | null>(null);
@@ -786,7 +786,6 @@ export default function ChallengeDetailScreen() {
             
             // Check for newly earned badges
             if (completeUser?.id) {
-              const { checkAndAwardBadges } = useBadgeLogic();
               checkAndAwardBadges(completeUser.id).then((newBadges) => {
                 if (newBadges && newBadges.length > 0) {
                   // Show badge modal for the first newly earned badge
@@ -833,6 +832,29 @@ export default function ChallengeDetailScreen() {
           setBadgeModalVisible(false);
           setUnlockedBadge(null);
         }}
+      />
+
+      {/* Report Challenge Modal */}
+      <ReportModal
+        visible={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        objectType="CHALLENGE"
+        objectId={challenge?.id || 0}
+        reporterId={completeUser?.id || 0}
+        objectName={challenge?.title}
+      />
+
+      {/* Report Comment Modal */}
+      <ReportModal
+        visible={reportCommentModalVisible}
+        onClose={() => {
+          setReportCommentModalVisible(false);
+          setSelectedCommentToReport(null);
+        }}
+        objectType="COMMENT"
+        objectId={selectedCommentToReport?.id || 0}
+        reporterId={completeUser?.id || 0}
+        objectName={selectedCommentToReport?.content}
       />
       </View>
     </>
