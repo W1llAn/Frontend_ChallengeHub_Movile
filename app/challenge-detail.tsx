@@ -33,6 +33,7 @@ import { SubmissionModal } from '@/components/SubmissionModal';
 import { BadgeUnlockedModal } from '@/components/BadgeUnlockedModal';
 import { ProgressDisplay, ReportModal } from '@/components/UI';
 import { SubmissionsGrid } from '@/components/SubmissionsGrid';
+import { ChallengeLeaderboard } from '@/components/ChallengeLeaderboard';
 import { transformDocumentUrl, transformChallengeImageUrl } from '@/utils/image-url.util';
 
 const { width } = Dimensions.get('window');
@@ -611,6 +612,17 @@ export default function ChallengeDetailScreen() {
               }}
             />
           )}
+
+          {/* Divider */}
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          {/* Challenge Leaderboard - Top 3 Users */}
+          <View style={[styles.section, { backgroundColor: 'transparent' }]}>
+            <ChallengeLeaderboard
+              challengeId={challenge?.id}
+              colors={colors}
+            />
+          </View>
 
           {/* Comments Section */}
           <View style={[styles.commentsSection, { backgroundColor: 'transparent' }]}>
