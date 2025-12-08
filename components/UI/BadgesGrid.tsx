@@ -62,11 +62,19 @@ export default function BadgesGrid({
       >
         {item.name}
       </Text>
+      {item.description && (
+        <Text
+          style={[styles.badgeDescription, { color: colors.textSecondary }]}
+          numberOfLines={2}
+        >
+          {item.description}
+        </Text>
+      )}
       <Text
-        style={[styles.badgeDescription, { color: colors.textSecondary }]}
-        numberOfLines={2}
+        style={[styles.badgeHint, { color: colors.primary }]}
+        numberOfLines={1}
       >
-        {item.description}
+        Toca para ver más
       </Text>
     </TouchableOpacity>
   );
@@ -146,6 +154,13 @@ export default function BadgesGrid({
       fontSize: 10,
       textAlign: "center",
       lineHeight: 14,
+    },
+    badgeHint: {
+      fontSize: 9,
+      fontWeight: "500",
+      textAlign: "center",
+      marginTop: 4,
+      opacity: 0.8,
     },
     loadingContainer: {
       justifyContent: "center",
