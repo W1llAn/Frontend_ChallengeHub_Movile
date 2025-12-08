@@ -178,12 +178,12 @@ export default function BadgeModal({
           <View style={styles.divider} />
 
           <View style={styles.infoSection}>
-            <Text style={styles.infoLabel}>ID de Insignia</Text>
-            <Text style={styles.infoValue}>{badge.id}</Text>
+            <Text style={styles.infoLabel}>Tipo de Insignia</Text>
+            <Text style={styles.infoValue}>Logro Desbloqueado</Text>
           </View>
 
           <View style={styles.infoSection}>
-            <Text style={styles.infoLabel}>Fecha de Creación</Text>
+            <Text style={styles.infoLabel}>Disponible Desde</Text>
             <Text style={styles.infoValue}>
               {formatDate(badge.createdAt)}
             </Text>
